@@ -1,0 +1,14 @@
+---
+description: Regras para planejamento e execução faseada no Cursor
+alwaysApply: true
+---
+
+# Plan Mode e execução faseada
+
+- Antes de implementar, gerar plano detalhado e aguardar aprovação.
+- Salvar plano aprovado em `.cursor/plans/` quando possível.
+- Executar uma fase por vez.
+- Não misturar fundação, CRUDs, placar e competências em uma mesma fase.
+- Ao concluir uma fase, listar arquivos alterados, comandos, testes e pendências.
+- Se houver ambiguidade, criar pergunta objetiva ou TODO seguro.
+- Não usar dados ou regras inventadas como definitivas; marcar como pendente de QA.

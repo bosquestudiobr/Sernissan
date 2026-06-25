@@ -1,0 +1,18 @@
+---
+description: Arquitetura de código Next.js por features
+alwaysApply: false
+globs: ["**/*.ts", "**/*.tsx"]
+---
+
+# Arquitetura de código
+
+- Usar estrutura por features.
+- `app/` deve compor rotas/layouts, não concentrar regra de negócio.
+- Queries ficam em `server/queries` ou dentro da feature em `server`.
+- Mutations ficam em `server/actions` ou feature actions.
+- Schemas Zod ficam próximos da feature.
+- Permissões ficam centralizadas em `lib/permissions`.
+- Componentes genéricos ficam em `components`.
+- Componentes específicos ficam em `features/<modulo>/components`.
+- Evitar estado global; usar URL query params para filtros/paginação.
+- Usar TanStack Query somente quando Server Components não forem suficientes.

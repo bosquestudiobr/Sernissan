@@ -1,0 +1,16 @@
+---
+description: Regras de frontend Next.js, componentes, formulários e UI
+alwaysApply: false
+globs: ["**/*.tsx", "**/*.ts"]
+---
+
+# Next.js/UI
+
+- App Router com rotas segmentadas.
+- Componentes visuais ficam em `components`, lógica de negócio em `features`/`server`.
+- Usar shadcn/ui e Tailwind.
+- Formulários com React Hook Form + Zod.
+- Tabelas com TanStack Table e paginação server-side.
+- Evitar estado global desnecessário.
+- `use client` apenas para componentes interativos.
+- Estados de loading, erro e vazio devem existir em toda tela de dados.

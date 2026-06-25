@@ -1,0 +1,15 @@
+---
+description: Regras de testes e QA
+alwaysApply: false
+globs: ["**/*.test.ts", "**/*.spec.ts", "**/tests/**"]
+---
+
+# Testes
+
+- Usar Vitest para regras puras e validações.
+- Usar Testing Library para componentes.
+- Usar Playwright para fluxos críticos.
+- Testar permissões por perfil e escopo.
+- Testar cálculo de placar/ranking.
+- Testar token e assinatura de RV.
+- Todo bug corrigido deve ganhar teste quando possível.

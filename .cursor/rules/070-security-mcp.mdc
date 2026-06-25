@@ -1,0 +1,16 @@
+---
+description: Segurança, MCP, secrets e ambiente
+alwaysApply: true
+---
+
+# Segurança e MCP
+
+- Nunca escrever secrets em arquivos versionados.
+- Nunca exibir secret/service role em logs ou respostas.
+- Nunca importar admin Supabase client em Client Component.
+- Confirmar Project Ref antes de aplicar migration remota.
+- Preferir MCP read-only no início.
+- Não executar ações destrutivas no banco sem confirmação explícita.
+- Não conectar ao Supabase de produção durante desenvolvimento inicial.
+- RLS de desenvolvimento não é RLS de produção.
+- Storage privado por padrão; signed URLs para arquivos sensíveis.

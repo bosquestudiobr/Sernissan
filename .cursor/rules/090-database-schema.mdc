@@ -1,0 +1,17 @@
+---
+description: Regras de modelagem Supabase/Postgres
+alwaysApply: false
+globs: ["**/*.sql", "**/server/**/*.ts", "**/features/**/*.ts"]
+---
+
+# Banco de dados
+
+- Usar UUID como padrão para entidades principais, salvo motivo claro.
+- Usar `created_at`, `updated_at`, `created_by`, `updated_by` quando relevante.
+- Evitar arrays para relações grandes; usar FK ou join table.
+- Indexar FKs e colunas usadas em RLS/filtros.
+- Criar constraints de unicidade para chaves naturais importantes.
+- Soft delete (`deleted_at`) para dados operacionais quando exclusão real não for segura.
+- Views/RPCs são preferíveis para rankings e resumos pesados.
+- Jobs de recálculo precisam ser idempotentes.
+- Migrations devem ser versionadas.

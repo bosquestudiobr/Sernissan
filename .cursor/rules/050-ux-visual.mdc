@@ -1,0 +1,18 @@
+---
+description: Regras visuais para preservar a UX SerNissan do Bubble
+alwaysApply: false
+globs: ["**/*.tsx", "**/*.ts", "**/*.css", "**/tailwind.config.*"]
+---
+
+# UX visual SerNissan
+
+- Não criar interface SaaS genérica.
+- Seguir `docs/13-guia-visual-ux-ui.md` e `docs/14-design-system-componentes.md`.
+- Layout autenticado deve usar header superior, sidebar compacta, área principal cinza e footer preto.
+- Botões principais pretos; botões de destaque/críticos vermelhos Nissan.
+- Tabelas administrativas devem ser densas, com linhas compactas e ações por linha.
+- Inputs inline devem ter fundo cinza claro.
+- Switch ativo deve ser preto; inativo cinza.
+- Matriz de competências deve usar verde/amarelo/vermelho para Sim/Parcial/Não.
+- Prioridade inicial é desktop; usar scroll horizontal para tabelas largas.
+- Criar componentes reutilizáveis; não duplicar layout de tabela por página.

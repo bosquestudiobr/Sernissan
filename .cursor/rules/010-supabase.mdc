@@ -1,0 +1,17 @@
+---
+description: Regras para Supabase, banco, auth, RLS, storage e queries
+alwaysApply: false
+globs: ["**/supabase/**", "**/lib/supabase/**", "**/server/**", "**/*.sql"]
+---
+
+# Supabase
+
+- Usar tipos gerados do Supabase em `lib/database.types.ts`.
+- Criar client browser e server separados.
+- Usar RLS em todas as tabelas públicas.
+- Nunca usar service role em Client Components.
+- Preferir queries específicas a `select('*')`.
+- Criar índices para FKs e filtros frequentes.
+- Storage privado por padrão; signed URLs para arquivos sensíveis.
+- SQL migrations devem ser reexecutáveis quando possível.
+- Para relacionamentos N:N, usar join tables, não arrays de UUID.

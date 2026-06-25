@@ -1,0 +1,19 @@
+---
+description: Visão geral do projeto SerNissan e regras sempre aplicadas
+alwaysApply: true
+---
+
+# SerNissan
+
+Reconstrução do app Bubble SerNissan usando Next.js App Router, TypeScript, Supabase, Tailwind, shadcn/ui, Zod, React Hook Form, TanStack Table, Vitest e Playwright.
+
+Regras obrigatórias:
+
+- Server Components por padrão.
+- Usar Supabase SSR com cookies.
+- Nunca expor secret/service role key no client.
+- Validar mutations com Zod.
+- Listagens sempre paginadas no servidor.
+- Permissões centralizadas em `lib/permissions`.
+- RLS deve estar ativado em tabelas públicas.
+- Jobs pesados devem ser idempotentes.

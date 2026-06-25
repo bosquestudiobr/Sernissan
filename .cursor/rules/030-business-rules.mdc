@@ -1,0 +1,16 @@
+---
+description: Regras de negócio do SerNissan para placar, indicadores, competências e RV
+alwaysApply: false
+globs: ["**/features/**", "**/server/**"]
+---
+
+# Regras de negócio
+
+- Perfil com nível menor tem maior permissão.
+- Escopo de dados segue empresa, país, divisão, setor, grupo, concessionária, área e função.
+- Placar pertence a empresa/concessionária/data.
+- Indicador pertence a placar e pode estar ligado a colaborador, área e função.
+- Meta customizada exige justificativa.
+- Ranking/pontos devem ser recalculados por rotina idempotente.
+- RV público usa token expirável e não deve expor IDs internos.
+- Assinatura de RV salva hash, IP, user agent, data/hora e bloqueia edição.
