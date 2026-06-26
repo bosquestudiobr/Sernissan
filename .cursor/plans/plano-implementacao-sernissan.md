@@ -7,10 +7,10 @@ todos:
     status: completed
   - id: fase-0b
     content: "Fase 0B: Bootstrap Next.js + schema QA via Supabase CLI + tipos TS + buckets"
-    status: pending
+    status: completed
   - id: fase-1
-    content: "Fase 1: AppShell visual + auth Supabase + middleware + tokens CSS"
-    status: pending
+    content: "Fase 1: AppShell visual + auth Supabase + proxy.ts + tokens CSS"
+    status: completed
   - id: fase-2
     content: "Fase 2: Contexto organizacional + lib/permissions + sidebar dinâmica + RLS helpers"
     status: pending
