@@ -1,12 +1,21 @@
-﻿import { createServerClient } from '@supabase/ssr'
+import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
 import type { Database } from './database.types'
 
 const AUTH_ROUTES = ['/entrar', '/resetar-senha']
+const PUBLIC_ROUTES = ['/rv-publico']
+
+function matchesRoute(routes: string[], pathname: string) {
+  return routes.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+}
 
 function isAuthRoute(pathname: string) {
-  return AUTH_ROUTES.some((route) => pathname === route || pathname.startsWith(`${route}/`))
+  return matchesRoute(AUTH_ROUTES, pathname)
+}
+
+function isPublicRoute(pathname: string) {
+  return isAuthRoute(pathname) || matchesRoute(PUBLIC_ROUTES, pathname)
 }
 
 export async function updateSession(request: NextRequest) {
@@ -39,11 +48,11 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl
 
-  if (!user && !isAuthRoute(pathname)) {
+  if (!user && !isPublicRoute(pathname)) {
     const url = request.nextUrl.clone()
     url.pathname = '/entrar'
     url.searchParams.set('redirectTo', pathname)
-  const redirectResponse = NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
     cookiesToSetFromResponse(supabaseResponse, redirectResponse)
     return redirectResponse
   }

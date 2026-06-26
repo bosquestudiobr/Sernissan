@@ -8,6 +8,7 @@ import { canAccessIndicatorObjectives } from './indicadores'
 import { canAccessPlacar } from './placar'
 import { canAccessCompetencias } from './competencias'
 import { canAccessSolicitacoes } from './solicitacoes'
+import { canAccessVisitas } from './visitas'
 import type { PermissionAction } from './actions'
 import {
   canAccessConcessionaria,
@@ -57,6 +58,7 @@ export function canAccessRoute(user: CurrentUserView, route: string): boolean {
   if (route.startsWith('/placar') && !canAccessPlacar(user.perfilNivel)) return false
   if (route.startsWith('/competencias') && !canAccessCompetencias(user.perfilNivel)) return false
   if (route.startsWith('/solicitacoes') && !canAccessSolicitacoes(user.perfilNivel)) return false
+  if (route.startsWith('/visitas') && !canAccessVisitas(user.perfilNivel)) return false
   if (route.startsWith('/indicadores') && !canAccessIndicatorObjectives(user.perfilNivel)) return false
   if (route.startsWith('/biblioteca-indicadores') && !canManageStructuralAdmin(user.perfilNivel)) return false
   if (route.startsWith('/admin') && !canManageStructuralAdmin(user.perfilNivel)) return false
@@ -65,6 +67,7 @@ export function canAccessRoute(user: CurrentUserView, route: string): boolean {
 
 export { canManageStructuralAdmin } from './admin'
 export { canAccessSetor, canAccessGrupo, canAccessConcessionaria, canAccessOrganizationalContext }
+
 
 
 
