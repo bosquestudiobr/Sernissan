@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -3803,7 +3803,9 @@ export type Database = {
           created_at: string
           created_by: string | null
           data: string | null
+          data_finalizada: string | null
           empresa: string | null
+          finalizada: boolean
           id: string
           id_2: number | null
           updated_at: string
@@ -3813,7 +3815,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: string | null
+          data_finalizada?: string | null
           empresa?: string | null
+          finalizada?: boolean
           id?: string
           id_2?: number | null
           updated_at?: string
@@ -3823,7 +3827,9 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           data?: string | null
+          data_finalizada?: string | null
           empresa?: string | null
+          finalizada?: boolean
           id?: string
           id_2?: number | null
           updated_at?: string
@@ -4323,3 +4329,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
