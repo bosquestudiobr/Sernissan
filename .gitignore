@@ -26,6 +26,9 @@ pnpm-debug.log*
 .idea/
 .vscode/settings.json
 
+# Bubble exports (podem conter API keys)
+*.bubble
+
 # Generated
 coverage/
 playwright-report/

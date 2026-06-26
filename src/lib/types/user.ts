@@ -15,20 +15,32 @@
 export type ContextOption = {
   id: string
   label: string
+  empresaId?: string | null
+  paisId?: string | null
+  divisaoId?: string | null
   setorId?: string | null
   grupoId?: string | null
 }
 
 export type OrganizationalContextView = {
+  empresaId: string | null
+  paisId: string | null
+  divisaoId: string | null
   setorId: string | null
   grupoId: string | null
   concessionariaId: string | null
+  empresa: string
+  pais: string
+  divisao: string
   setor: string
   grupo: string
   concessionaria: string
 }
 
 export type OrganizationalContextOptions = {
+  empresas: ContextOption[]
+  paises: ContextOption[]
+  divisoes: ContextOption[]
   setores: ContextOption[]
   grupos: ContextOption[]
   concessionarias: ContextOption[]
@@ -48,4 +60,6 @@ export type AppModule = {
   label: string
   icon: string
   dbValue: string
+  sortOrder?: number
+  children?: AppModule[]
 }

@@ -7,6 +7,9 @@ const uuid = '550e8400-e29b-41d4-a716-446655440000'
 describe('OrganizationalContextSchema', () => {
   it('aceita contexto com uuids validos', () => {
     const result = OrganizationalContextSchema.safeParse({
+      empresaId: uuid,
+      paisId: uuid,
+      divisaoId: uuid,
       setorId: uuid,
       grupoId: uuid,
       concessionariaId: uuid,
@@ -16,6 +19,9 @@ describe('OrganizationalContextSchema', () => {
 
   it('aceita valores nulos', () => {
     const result = OrganizationalContextSchema.safeParse({
+      empresaId: null,
+      paisId: null,
+      divisaoId: null,
       setorId: null,
       grupoId: null,
       concessionariaId: null,

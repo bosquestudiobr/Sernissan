@@ -1,12 +1,20 @@
 ﻿import { z } from 'zod'
 
+const nullableUuid = z.string().uuid().nullable()
+
 export const OrganizationalContextSchema = z.object({
-  setorId: z.string().uuid().nullable(),
-  grupoId: z.string().uuid().nullable(),
-  concessionariaId: z.string().uuid().nullable(),
+  empresaId: nullableUuid,
+  paisId: nullableUuid,
+  divisaoId: nullableUuid,
+  setorId: nullableUuid,
+  grupoId: nullableUuid,
+  concessionariaId: nullableUuid,
 })
 
 export const PermissionScopeSchema = z.object({
+  empresaId: z.string().uuid().optional(),
+  paisId: z.string().uuid().optional(),
+  divisaoId: z.string().uuid().optional(),
   setorId: z.string().uuid().optional(),
   grupoId: z.string().uuid().optional(),
   concessionariaId: z.string().uuid().optional(),

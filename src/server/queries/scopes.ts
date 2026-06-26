@@ -1,4 +1,5 @@
 ﻿import { createClient } from '@/lib/supabase/server'
+import { fixUtf8Mojibake } from '@/lib/text/encoding'
 import { isHighPrivilegeScope } from '@/lib/permissions/scopes'
 import type { UserScopes } from '@/lib/types/user'
 
@@ -38,7 +39,7 @@ export async function getPerfilLabel(perfilDbValue: string | null): Promise<stri
     .eq('is_deleted', false)
     .maybeSingle()
 
-  return data?.label ?? perfilDbValue
+  return fixUtf8Mojibake(data?.label ?? perfilDbValue)
 }
 
 export async function getUserScopes(userId: string): Promise<UserScopes> {

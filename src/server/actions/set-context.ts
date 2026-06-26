@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache'
 
 import { assertCan, requireCurrentUser } from '@/lib/permissions'
+import { enrichOrganizationalContext, isHierarchyConsistent } from '@/lib/organizational-context/hierarchy'
 import { OrganizationalContextSchema } from '@/lib/validations/context'
 import {
   getOrganizationalContextOptions,
@@ -20,52 +21,62 @@ function readUuidField(formData: FormData, key: string): string | null {
   return value ? value : null
 }
 
+function readContextFromForm(formData: FormData) {
+  return {
+    empresaId: readUuidField(formData, 'empresaId'),
+    paisId: readUuidField(formData, 'paisId'),
+    divisaoId: readUuidField(formData, 'divisaoId'),
+    setorId: readUuidField(formData, 'setorId'),
+    grupoId: readUuidField(formData, 'grupoId'),
+    concessionariaId: readUuidField(formData, 'concessionariaId'),
+  }
+}
+
 export async function setOrganizationalContextAction(
   _prevState: SetContextActionState,
   formData: FormData,
 ): Promise<SetContextActionState> {
   const user = await requireCurrentUser()
   const scopes = await getUserScopes(user.id)
+  const options = await getOrganizationalContextOptions(user.id)
 
-  const parsed = OrganizationalContextSchema.safeParse({
-    setorId: readUuidField(formData, 'setorId'),
-    grupoId: readUuidField(formData, 'grupoId'),
-    concessionariaId: readUuidField(formData, 'concessionariaId'),
-  })
-
+  const parsed = OrganizationalContextSchema.safeParse(readContextFromForm(formData))
   if (!parsed.success) {
     return { ok: false, message: 'Contexto organizacional invalido.' }
   }
 
+  const enriched = enrichOrganizationalContext(parsed.data, options)
+
   try {
-    assertCan(user, 'context:set', scopes, parsed.data)
+    assertCan(user, 'context:set', scopes, enriched)
   } catch {
     return { ok: false, message: 'Voce nao tem permissao para este contexto.' }
   }
 
-  const options = await getOrganizationalContextOptions(user.id)
+  if (!isHierarchyConsistent(enriched, options)) {
+    return { ok: false, message: 'Hierarquia inconsistente. Revise os niveis selecionados.' }
+  }
 
-  if (parsed.data.setorId && !options.setores.some((s) => s.id === parsed.data.setorId)) {
+  if (enriched.empresaId && !options.empresas.some((e) => e.id === enriched.empresaId)) {
+    return { ok: false, message: 'Empresa nao permitida.' }
+  }
+  if (enriched.paisId && !options.paises.some((p) => p.id === enriched.paisId)) {
+    return { ok: false, message: 'Pais nao permitido.' }
+  }
+  if (enriched.divisaoId && !options.divisoes.some((d) => d.id === enriched.divisaoId)) {
+    return { ok: false, message: 'Divisao nao permitida.' }
+  }
+  if (enriched.setorId && !options.setores.some((s) => s.id === enriched.setorId)) {
     return { ok: false, message: 'Setor nao permitido.' }
   }
-
-  if (parsed.data.grupoId) {
-    const grupo = options.grupos.find((g) => g.id === parsed.data.grupoId)
-    if (!grupo) return { ok: false, message: 'Grupo nao permitido.' }
-    if (parsed.data.setorId && grupo.setorId && grupo.setorId !== parsed.data.setorId) {
-      return { ok: false, message: 'Grupo nao pertence ao setor selecionado.' }
-    }
+  if (enriched.grupoId && !options.grupos.some((g) => g.id === enriched.grupoId)) {
+    return { ok: false, message: 'Grupo nao permitido.' }
+  }
+  if (enriched.concessionariaId && !options.concessionarias.some((c) => c.id === enriched.concessionariaId)) {
+    return { ok: false, message: 'Concessionaria nao permitida.' }
   }
 
-  if (parsed.data.concessionariaId) {
-    const conc = options.concessionarias.find((c) => c.id === parsed.data.concessionariaId)
-    if (!conc) return { ok: false, message: 'Concessionaria nao permitida.' }
-    if (parsed.data.grupoId && conc.grupoId && conc.grupoId !== parsed.data.grupoId) {
-      return { ok: false, message: 'Concessionaria nao pertence ao grupo selecionado.' }
-    }
-  }
-
-  await writeOrganizationalContextCookie(parsed.data)
+  await writeOrganizationalContextCookie(enriched)
   revalidatePath('/', 'layout')
 
   return { ok: true }

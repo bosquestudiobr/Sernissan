@@ -23,6 +23,9 @@ export function canAccessOrganizationalContext(
   scopes: UserScopes,
   context: OrganizationalContextInput,
 ): boolean {
+  if (context.empresaId && scopes.empresaId && context.empresaId !== scopes.empresaId) {
+    if (!isHighPrivilegeScope(scopes.perfilNivel)) return false
+  }
   return (
     canAccessSetor(scopes, context.setorId) &&
     canAccessGrupo(scopes, context.grupoId) &&

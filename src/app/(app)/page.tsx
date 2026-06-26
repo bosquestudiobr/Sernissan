@@ -6,6 +6,7 @@ import {
   getCurrentOrganizationalContext,
 } from '@/server/queries/organizational-context'
 import { getAllowedSidebarItems } from '@/server/queries/sidebar'
+import { flattenSidebarItems } from '@/lib/navigation/sidebar-tree'
 import { Button } from '@/components/ui/button'
 
 export default async function HomePage() {
@@ -60,6 +61,18 @@ export default async function HomePage() {
           </h2>
           <dl className="grid gap-3 sm:grid-cols-2">
             <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Empresa</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{context.empresa}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Pais</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{context.pais}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Divisao</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{context.divisao}</dd>
+            </div>
+            <div>
               <dt className="text-xs text-[var(--sn-muted)]">Setor</dt>
               <dd className="font-medium text-[var(--sn-text)]">{context.setor}</dd>
             </div>
@@ -67,7 +80,7 @@ export default async function HomePage() {
               <dt className="text-xs text-[var(--sn-muted)]">Grupo</dt>
               <dd className="font-medium text-[var(--sn-text)]">{context.grupo}</dd>
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <dt className="text-xs text-[var(--sn-muted)]">Concessionaria</dt>
               <dd className="font-medium text-[var(--sn-text)]">{context.concessionaria}</dd>
             </div>
@@ -83,7 +96,7 @@ export default async function HomePage() {
           <p className="text-sm text-[var(--sn-muted)]">Nenhum modulo liberado para seu perfil.</p>
         ) : (
           <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
-            {sidebarItems.map((item) => (
+            {flattenSidebarItems(sidebarItems).map((item) => (
               <li
                 key={item.id}
                 className="rounded-md border border-[var(--sn-border)] bg-[var(--sn-field)] px-3 py-2 text-sm text-[var(--sn-text)]"

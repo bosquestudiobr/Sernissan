@@ -5,6 +5,14 @@ import { useActionState } from 'react'
 
 import type { OrganizationalContextOptions, OrganizationalContextView } from '@/lib/types/user'
 import {
+  enrichOrganizationalContext,
+  filterConcessionarias,
+  filterGrupos,
+  resolveChainFromConcessionaria,
+  resolveChainFromGrupo,
+  resolveChainFromSetor,
+} from '@/lib/organizational-context/hierarchy'
+import {
   setOrganizationalContextAction,
   type SetContextActionState,
 } from '@/server/actions/set-context'
@@ -23,25 +31,36 @@ export function HeaderSelectors({ context, options }: HeaderSelectorsProps) {
 
   const gruposFiltrados = useMemo(() => {
     if (!context.setorId) return options.grupos
-    return options.grupos.filter((grupo) => !grupo.setorId || grupo.setorId === context.setorId)
-  }, [context.setorId, options.grupos])
+    return filterGrupos(options, context.setorId)
+  }, [context.setorId, options])
 
   const concessionariasFiltradas = useMemo(() => {
     if (!context.grupoId) return options.concessionarias
-    return options.concessionarias.filter(
-      (conc) => !conc.grupoId || conc.grupoId === context.grupoId,
-    )
-  }, [context.grupoId, options.concessionarias])
+    return filterConcessionarias(options, context.grupoId)
+  }, [context.grupoId, options])
 
   function submitContext(next: {
     setorId: string | null
     grupoId: string | null
     concessionariaId: string | null
   }) {
+    const enriched = enrichOrganizationalContext(
+      {
+        empresaId: context.empresaId,
+        paisId: context.paisId,
+        divisaoId: context.divisaoId,
+        setorId: next.setorId,
+        grupoId: next.grupoId,
+        concessionariaId: next.concessionariaId,
+      },
+      options,
+    )
+
     const formData = new FormData()
-    formData.set('setorId', next.setorId ?? '')
-    formData.set('grupoId', next.grupoId ?? '')
-    formData.set('concessionariaId', next.concessionariaId ?? '')
+    for (const key of ['empresaId', 'paisId', 'divisaoId', 'setorId', 'grupoId', 'concessionariaId'] as const) {
+      formData.set(key, enriched[key] ?? '')
+    }
+
     startTransition(() => {
       formAction(formData)
     })
@@ -55,10 +74,10 @@ export function HeaderSelectors({ context, options }: HeaderSelectorsProps) {
         options={options.setores}
         disabled={isPending || options.setores.length === 0}
         onChange={(setorId) => {
+          const chain = resolveChainFromSetor(setorId || null, options)
           const grupoId = options.grupos.find((g) => g.setorId === setorId)?.id ?? null
-          const concessionariaId =
-            options.concessionarias.find((c) => c.grupoId === grupoId)?.id ?? null
-          submitContext({ setorId: setorId || null, grupoId, concessionariaId })
+          const concessionariaId = options.concessionarias.find((c) => c.grupoId === grupoId)?.id ?? null
+          submitContext({ setorId: chain.setorId, grupoId, concessionariaId })
         }}
       />
       <SelectorField
@@ -67,11 +86,11 @@ export function HeaderSelectors({ context, options }: HeaderSelectorsProps) {
         options={gruposFiltrados}
         disabled={isPending || gruposFiltrados.length === 0}
         onChange={(grupoId) => {
-          const concessionariaId =
-            options.concessionarias.find((c) => c.grupoId === grupoId)?.id ?? null
+          const chain = resolveChainFromGrupo(grupoId || null, options)
+          const concessionariaId = options.concessionarias.find((c) => c.grupoId === grupoId)?.id ?? null
           submitContext({
-            setorId: context.setorId,
-            grupoId: grupoId || null,
+            setorId: chain.setorId,
+            grupoId: chain.grupoId,
             concessionariaId,
           })
         }}
@@ -82,10 +101,11 @@ export function HeaderSelectors({ context, options }: HeaderSelectorsProps) {
         options={concessionariasFiltradas}
         disabled={isPending || concessionariasFiltradas.length === 0}
         onChange={(concessionariaId) => {
+          const chain = resolveChainFromConcessionaria(concessionariaId || null, options)
           submitContext({
-            setorId: context.setorId,
-            grupoId: context.grupoId,
-            concessionariaId: concessionariaId || null,
+            setorId: chain.setorId,
+            grupoId: chain.grupoId,
+            concessionariaId: chain.concessionariaId,
           })
         }}
       />

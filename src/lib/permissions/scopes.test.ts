@@ -33,19 +33,20 @@ describe('permission scopes', () => {
   })
 
   it('valida contexto completo', () => {
-    expect(
-      canAccessOrganizationalContext(scopes, {
-        setorId: 's1',
-        grupoId: 'g1',
-        concessionariaId: 'c1',
-      }),
-    ).toBe(true)
+    const full = {
+      empresaId: 'e1' as string | null,
+      paisId: null,
+      divisaoId: null,
+      setorId: 's1' as string | null,
+      grupoId: 'g1' as string | null,
+      concessionariaId: 'c1' as string | null,
+    }
+    expect(canAccessOrganizationalContext(scopes, full)).toBe(true)
 
     expect(
       canAccessOrganizationalContext(scopes, {
+        ...full,
         setorId: 's2',
-        grupoId: 'g1',
-        concessionariaId: 'c1',
       }),
     ).toBe(false)
   })
