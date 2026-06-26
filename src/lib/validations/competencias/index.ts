@@ -49,3 +49,47 @@ export const CompetencyMapHabitsSchema = z.object({
 })
 
 export const DeleteCompetencySchema = z.object({ id: uuid })
+
+export const CALIBRATION_STAGES = ['autocalibracao', 'lider', 'follow_up'] as const
+export const CALIBRATION_RESPONSES = ['sim', 'parcial', 'n_o'] as const
+
+export const CalibrationStageSchema = z.enum(CALIBRATION_STAGES)
+export const CalibrationResponseSchema = z.enum(CALIBRATION_RESPONSES)
+
+export const CalibrationMatrixParamsSchema = z.object({
+  stage: CalibrationStageSchema.optional(),
+})
+
+export const CalibrationCellSchema = z.object({
+  profileId: uuid,
+  habitoId: uuid,
+  stage: CalibrationStageSchema,
+  opcao: CalibrationResponseSchema,
+})
+
+export const CalibrationResetCellSchema = z.object({
+  profileId: uuid,
+  habitoId: uuid,
+  stage: CalibrationStageSchema,
+})
+
+export const CalibrationMatrixSaveSchema = z.object({
+  profileId: uuid,
+  cells: z
+    .array(
+      z.object({
+        habitoId: uuid,
+        stage: CalibrationStageSchema,
+        opcao: CalibrationResponseSchema.nullable(),
+      }),
+    )
+    .min(1, 'Nenhuma alteracao para salvar')
+    .max(500),
+})
+
+// Reservado para 7C: competencia_calibracao nao possui coluna de status no schema atual.
+export const CalibrationStatusSchema = z.object({
+  profileId: uuid,
+  status: z.enum(['aberta', 'finalizada']),
+})
+

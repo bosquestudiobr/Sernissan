@@ -32,12 +32,11 @@ export function CalibrationCollaboratorsTable({ data }: CalibrationCollaborators
       emptyTitle="Nenhum colaborador elegivel"
       rowActions={(row) => (
         <Link
-          href={`/competencias/calibracao?colaborador=${row.id}`}
-          className="inline-flex h-8 items-center rounded-md border border-[var(--sn-border)] px-2 text-xs text-[var(--sn-muted)] hover:bg-[var(--sn-field)]"
-          title="Matriz de calibracao disponivel na Fase 7B"
-          aria-disabled
+          href={`/competencias/calibracao/${row.id}`}
+          className="inline-flex h-8 items-center rounded-md border border-[var(--sn-border)] px-2 text-xs text-[var(--sn-text)] hover:bg-[var(--sn-field)]"
+          title="Abrir matriz de calibracao"
         >
-          Calibrar (7B)
+          Abrir matriz
         </Link>
       )}
     />

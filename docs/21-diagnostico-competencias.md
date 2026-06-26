@@ -97,3 +97,45 @@ erDiagram
 - Escopo/RLS de catálogo de competências.
 - Tratamento das tabelas legadas.
 - `competencia_habito.area` como FK (decisão de modelagem).
+
+---
+
+## Fase 7B - Matriz de calibracao
+
+### Rota
+- `/competencias/calibracao/[profileId]` (Server Component) abre a matriz do colaborador.
+- Lista de colaboradores (`/competencias/calibracao`) agora tem acao "Abrir matriz".
+
+### Tabelas efetivamente usadas
+- `competencia_calibracao`: entidade de calibracao por colaborador (+ concessionaria). Criada sob demanda no primeiro save.
+- `calibracao_resultado`: respostas por habito, com 3 etapas na MESMA linha:
+  - autocalibracao -> `opcao_colaborador` + `pontos_autocalibracao`
+  - lider -> `opcao_lider` + `pontos_lider`
+  - follow_up -> `opcao_follow_up` + `pontos_follow_up`
+- `competencia_mapa` (por `funcao_mapa`), `competencia_mapa_habitos`, `competencia_habito`: origem das linhas da matriz.
+- `app_options.calibracao_opcao`: opcoes Sim(1) / Parcial(0.3) / Nao(0). Vazio = nao avaliado.
+- `profiles`, `setor_concessionaria`, `funcao_colaborador`, `concessionaria`: card e escopo.
+
+### Decisoes da matriz
+- Linhas = habitos agrupados por mapa da funcao do colaborador; colunas = 3 etapas.
+- Cores semanticas: verde (`--sn-green-soft`) Sim, amarelo (`--sn-yellow-soft`) Parcial, vermelho (`--sn-red-soft`) Nao, cinza (`--sn-field`) nao avaliado.
+- Edicao em lote: alteracoes ficam em estado local e sao persistidas via `saveCalibrationMatrixAction` (upsert por celula). `opcao` aceita null (limpar).
+- Pontos derivam de `app_options.calibracao_opcao.metadata.value`.
+
+### Persistencia e lacuna de unicidade
+- `calibracao_resultado` NAO possui constraint unica `(calibracao, habito)`. O upsert e feito por select-then-update/insert na Server Action.
+- Migration `0006_competencias_matrix_helpers.sql`: indices em `calibracao_resultado(calibracao)`, `(habito)` e `competencia_calibracao(colaborador)`, `(concessionaria)` (ja existiam; aplicacao idempotente). Indices nao alteram `database.types.ts`.
+- Recomendacao para 7C/producao: dedupe + indice UNIQUE `(calibracao, habito)` para upsert nativo.
+
+### Permissoes
+- Edicao: nivel <= 6 dentro do escopo (empresa + concessionaria).
+- Visualizacao: dentro do escopo, ou o proprio colaborador (somente leitura).
+- Fora do escopo (e nao-self): redirect para `/acesso-negado`.
+- `competencia_calibracao` nao tem coluna de status -> sem trava de finalizacao nesta fase (`CalibrationStatusSchema` reservado para 7C; `updateCalibrationStatusAction` nao implementado).
+
+### Pendencias para 7C
+- Status/finalizacao de calibracao (exige coluna nova).
+- Pontuacao agregada/performance e cores por faixa (`calibracao_cores`).
+- Selecao de mapas por calibracao (`competencia_calibracao_mapas`) — hoje a matriz deriva da funcao.
+- Exportacao PDF e dashboard.
+- Indice UNIQUE para upsert nativo.

@@ -50,7 +50,7 @@ describe('CalibrationCollaboratorsTable', () => {
     )
     expect(screen.getByText('Ana Souza')).toBeInTheDocument()
     expect(screen.getByText('Vendas')).toBeInTheDocument()
-    expect(screen.getByText('Calibrar (7B)')).toBeInTheDocument()
+    expect(screen.getByText('Abrir matriz')).toBeInTheDocument()
   })
 
   it('mostra estado vazio', () => {
@@ -58,3 +58,4 @@ describe('CalibrationCollaboratorsTable', () => {
     expect(screen.getByText('Nenhum colaborador elegivel')).toBeInTheDocument()
   })
 })
+
