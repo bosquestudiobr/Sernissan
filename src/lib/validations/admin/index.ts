@@ -62,3 +62,50 @@ export const GrupoUpdateSchema = GrupoSchema.extend({ id: uuid })
 export const ConcessionariaUpdateSchema = ConcessionariaSchema.extend({ id: uuid })
 
 export const DeleteByIdSchema = z.object({ id: uuid })
+export const AreaSchema = z.object({
+  nome: z.string().trim().min(1, 'Nome obrigatorio').max(200),
+  empresa: optionalUuid,
+})
+
+export const FuncaoSchema = z.object({
+  nome: z.string().trim().min(1, 'Nome obrigatorio').max(200),
+  empresa: optionalUuid,
+  area: optionalUuid,
+  chave: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === 'on'),
+  lideranca: z
+    .string()
+    .optional()
+    .transform((v) => v === 'true' || v === 'on'),
+})
+
+export const AreaUpdateSchema = AreaSchema.extend({ id: uuid })
+export const FuncaoUpdateSchema = FuncaoSchema.extend({ id: uuid })
+
+export const ProfileAdminUpdateSchema = z.object({
+  id: uuid,
+  nome: z.string().trim().min(1, 'Nome obrigatorio').max(200),
+  perfil: z.string().trim().min(1, 'Perfil obrigatorio'),
+  empresa: optionalUuid,
+  setor: optionalUuid,
+  divisao: optionalUuid,
+  grupo: optionalUuid,
+  concessionaria: optionalUuid,
+  area: optionalUuid,
+  funcao: optionalUuid,
+})
+
+export const ProfileRelationshipsSchema = z.object({
+  id: uuid,
+  grupoIds: z.array(uuid).default([]),
+  concessionariaIds: z.array(uuid).default([]),
+  areaIds: z.array(uuid).default([]),
+  funcaoId: optionalUuid,
+})
+
+export const SyncRelationshipListSchema = z.object({
+  parentId: uuid,
+  childIds: z.array(uuid),
+})

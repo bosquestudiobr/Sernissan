@@ -1,4 +1,4 @@
-'use server'
+﻿'use server'
 
 import { revalidatePath } from 'next/cache'
 
@@ -18,6 +18,7 @@ import {
   SetorSchema,
   SetorUpdateSchema,
 } from '@/lib/validations/admin'
+import { parseIdList, syncJoinTable } from '@/lib/server/sync-relationships'
 import { createClient } from '@/lib/supabase/server'
 
 export type AdminActionState = {
@@ -119,6 +120,13 @@ export async function updatePaisAction(_: AdminActionState, formData: FormData):
   const supabase = await createClient()
   const { error } = await supabase.from('pais').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return { ok: false, message: error.message }
+  if (formData.has('divisao_ids')) {
+    try {
+      await syncJoinTable(supabase, 'pais_divisoes', 'pais_id', id, 'divisao_id', parseIdList(formData.get('divisao_ids')))
+    } catch (syncError) {
+      return { ok: false, message: syncError instanceof Error ? syncError.message : 'Erro ao sincronizar divisoes.' }
+    }
+  }
   revalidatePath('/admin/paises')
   return { ok: true }
 }
@@ -153,6 +161,13 @@ export async function updateDivisaoAction(_: AdminActionState, formData: FormDat
   const supabase = await createClient()
   const { error } = await supabase.from('divisao').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return { ok: false, message: error.message }
+  if (formData.has('setor_ids')) {
+    try {
+      await syncJoinTable(supabase, 'divisao_setores', 'divisao_id', id, 'setores_id', parseIdList(formData.get('setor_ids')))
+    } catch (syncError) {
+      return { ok: false, message: syncError instanceof Error ? syncError.message : 'Erro ao sincronizar setores.' }
+    }
+  }
   revalidatePath('/admin/divisoes')
   return { ok: true }
 }
@@ -221,6 +236,13 @@ export async function updateGrupoAction(_: AdminActionState, formData: FormData)
   const supabase = await createClient()
   const { error } = await supabase.from('grupo').update({ ...payload, updated_at: new Date().toISOString() }).eq('id', id)
   if (error) return { ok: false, message: error.message }
+  if (formData.has('concessionaria_ids')) {
+    try {
+      await syncJoinTable(supabase, 'grupo_concessionarias', 'grupo_id', id, 'concessionaria_id', parseIdList(formData.get('concessionaria_ids')))
+    } catch (syncError) {
+      return { ok: false, message: syncError instanceof Error ? syncError.message : 'Erro ao sincronizar concessionarias.' }
+    }
+  }
   revalidatePath('/admin/grupos')
   return { ok: true }
 }

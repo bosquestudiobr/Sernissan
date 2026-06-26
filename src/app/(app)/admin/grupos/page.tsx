@@ -7,6 +7,7 @@ import { buildAdminPageContext } from '@/features/admin/buildAdminPageContext'
 import { parseListParams } from '@/server/queries/list-helpers'
 import { listGrupos } from '@/server/queries/admin/lists'
 import { createGrupoAction, deleteGrupoAction, updateGrupoAction } from '@/server/actions/admin'
+import { getGrupoConcessionariasMap, getRelationshipOptions } from '@/server/queries/admin/relationships'
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> }
 
@@ -14,6 +15,8 @@ export default async function GruposAdminPage({ searchParams }: PageProps) {
   const params = parseListParams(await searchParams)
   const { scopeCtx, filterOptions } = await buildAdminPageContext()
   const result = await listGrupos(params, scopeCtx)
+  const relationshipOptions = await getRelationshipOptions(scopeCtx.user.empresaId)
+  const concessionariaMap = await getGrupoConcessionariasMap(result.data.map((row) => row.id))
 
   return (
     <Suspense fallback={<LoadingState />}>
@@ -35,6 +38,14 @@ export default async function GruposAdminPage({ searchParams }: PageProps) {
           { name: 'id_2', label: 'Codigo' },
           { name: 'empresa', label: 'Empresa', type: 'select', options: filterOptions.empresas.map((o) => ({ label: o.label, value: o.id })) },
           { name: 'setor', label: 'Setor', type: 'select', options: filterOptions.setores.map((o) => ({ label: o.label, value: o.id })) },
+        ]}
+        relationshipFields={[
+          {
+            name: 'concessionaria_ids',
+            label: 'Concessionarias vinculadas',
+            options: relationshipOptions.concessionarias.map((o) => ({ label: o.label, value: o.id })),
+            getSelectedIds: (row) => concessionariaMap[row.id] ?? [],
+          },
         ]}
         columns={[
           { key: 'nome', header: 'Nome', cell: (row) => row.nome ?? '—' },

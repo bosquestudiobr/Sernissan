@@ -1,9 +1,10 @@
-'use client'
+﻿'use client'
 
 import { useActionState, useState } from 'react'
 import { Plus } from 'lucide-react'
 
 import { AdminPageShell } from '@/components/admin/AdminPageShell'
+import { MultiSelectField } from '@/components/admin/MultiSelectField'
 import { ServerDataTable, type DataTableColumn } from '@/components/data-table/ServerDataTable'
 import { TablePagination } from '@/components/data-table/TablePagination'
 import { RowActions } from '@/components/data-table/RowActions'
@@ -23,9 +24,17 @@ import type { AdminActionState } from '@/server/actions/admin'
 export type AdminField = {
   name: string
   label: string
-  type?: 'text' | 'email' | 'select'
+  type?: 'text' | 'email' | 'select' | 'checkbox'
   required?: boolean
   options?: { label: string; value: string }[]
+  editOnly?: boolean
+}
+
+export type AdminRelationshipField<T> = {
+  name: string
+  label: string
+  options: { label: string; value: string }[]
+  getSelectedIds: (row: T) => string[]
 }
 
 type AdminCrudViewProps<T extends { id: string }> = {
@@ -33,9 +42,11 @@ type AdminCrudViewProps<T extends { id: string }> = {
   description?: string
   entityLabel: string
   fields: AdminField[]
+  relationshipFields?: AdminRelationshipField<T>[]
   columns: DataTableColumn<T>[]
   result: PaginatedResult<T>
   filters?: React.ReactNode
+  hideCreate?: boolean
   createAction: (prev: AdminActionState, formData: FormData) => Promise<AdminActionState>
   updateAction: (prev: AdminActionState, formData: FormData) => Promise<AdminActionState>
   deleteAction: (prev: AdminActionState, formData: FormData) => Promise<AdminActionState>
@@ -49,9 +60,11 @@ export function AdminCrudView<T extends { id: string }>({
   description,
   entityLabel,
   fields,
+  relationshipFields = [],
   columns,
   result,
   filters,
+  hideCreate = false,
   createAction,
   updateAction,
   deleteAction,
@@ -85,15 +98,18 @@ export function AdminCrudView<T extends { id: string }>({
   }
 
   const values = editing ? mapRowToFields(editing) : {}
+  const visibleFields = fields.filter((field) => !field.editOnly || isEdit)
 
   return (
     <AdminPageShell
       title={title}
       description={description}
       actions={
-        <Button type="button" className="h-9 bg-[var(--sn-black)] text-white hover:bg-black/90" onClick={openCreate}>
-          <Plus className="mr-1 size-4" /> Adicionar {entityLabel}
-        </Button>
+        hideCreate ? undefined : (
+          <Button type="button" className="h-9 bg-[var(--sn-black)] text-white hover:bg-black/90" onClick={openCreate}>
+            <Plus className="mr-1 size-4" /> Adicionar {entityLabel}
+          </Button>
+        )
       }
       filters={filters}
       footer={
@@ -114,7 +130,7 @@ export function AdminCrudView<T extends { id: string }>({
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{isEdit ? `Editar ${entityLabel}` : `Novo ${entityLabel}`}</DialogTitle>
           </DialogHeader>
@@ -126,7 +142,7 @@ export function AdminCrudView<T extends { id: string }>({
             className="space-y-3"
           >
             {isEdit ? <input type="hidden" name="id" value={editing.id} /> : null}
-            {fields.map((field) => (
+            {visibleFields.map((field) => (
               <div key={field.name} className="space-y-1">
                 <Label htmlFor={field.name}>{field.label}</Label>
                 {field.type === 'select' ? (
@@ -144,6 +160,17 @@ export function AdminCrudView<T extends { id: string }>({
                       </option>
                     ))}
                   </select>
+                ) : field.type === 'checkbox' ? (
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      id={field.name}
+                      name={field.name}
+                      type="checkbox"
+                      defaultChecked={values[field.name] === 'true'}
+                      className="size-4 rounded border-[var(--sn-border)]"
+                    />
+                    <span>{field.label}</span>
+                  </label>
                 ) : (
                   <Input
                     id={field.name}
@@ -159,6 +186,17 @@ export function AdminCrudView<T extends { id: string }>({
                 ) : null}
               </div>
             ))}
+            {isEdit
+              ? relationshipFields.map((field) => (
+                  <MultiSelectField
+                    key={field.name}
+                    name={field.name}
+                    label={field.label}
+                    options={field.options}
+                    defaultSelected={editing ? field.getSelectedIds(editing) : []}
+                  />
+                ))
+              : null}
             {formState.message && !formState.ok ? (
               <p className="text-sm text-[var(--sn-red)]">{formState.message}</p>
             ) : null}

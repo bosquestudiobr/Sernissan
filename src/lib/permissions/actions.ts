@@ -9,4 +9,7 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionAction> = {
   '/admin/setores': 'admin:manage',
   '/admin/grupos': 'admin:manage',
   '/admin/concessionarias': 'admin:manage',
+  '/admin/usuarios': 'admin:manage',
+  '/admin/areas-funcoes': 'admin:manage',
 }
+

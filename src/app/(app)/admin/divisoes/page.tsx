@@ -7,6 +7,7 @@ import { buildAdminPageContext } from '@/features/admin/buildAdminPageContext'
 import { parseListParams } from '@/server/queries/list-helpers'
 import { listDivisoes } from '@/server/queries/admin/lists'
 import { createDivisaoAction, deleteDivisaoAction, updateDivisaoAction } from '@/server/actions/admin'
+import { getDivisaoSetoresMap, getRelationshipOptions } from '@/server/queries/admin/relationships'
 
 type PageProps = { searchParams: Promise<Record<string, string | string[] | undefined>> }
 
@@ -14,6 +15,8 @@ export default async function DivisoesAdminPage({ searchParams }: PageProps) {
   const params = parseListParams(await searchParams)
   const { scopeCtx, filterOptions } = await buildAdminPageContext()
   const result = await listDivisoes(params, scopeCtx)
+  const relationshipOptions = await getRelationshipOptions(scopeCtx.user.empresaId)
+  const setorMap = await getDivisaoSetoresMap(result.data.map((row) => row.id))
 
   return (
     <Suspense fallback={<LoadingState />}>
@@ -35,6 +38,14 @@ export default async function DivisoesAdminPage({ searchParams }: PageProps) {
           { name: 'id_2', label: 'Codigo' },
           { name: 'empresa', label: 'Empresa', type: 'select', options: filterOptions.empresas.map((o) => ({ label: o.label, value: o.id })) },
           { name: 'pais', label: 'Pais', type: 'select', options: filterOptions.paises.map((o) => ({ label: o.label, value: o.id })) },
+        ]}
+        relationshipFields={[
+          {
+            name: 'setor_ids',
+            label: 'Setores vinculados',
+            options: relationshipOptions.setores.map((o) => ({ label: o.label, value: o.id })),
+            getSelectedIds: (row) => setorMap[row.id] ?? [],
+          },
         ]}
         columns={[
           { key: 'nome', header: 'Nome', cell: (row) => row.nome ?? '—' },
