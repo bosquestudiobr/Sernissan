@@ -5,7 +5,7 @@
   indicadores: '/indicadores',
   solicitacoes: '/solicitacoes',
   placar: '/placar',
-  agenda: '/modulos/agenda',
+  agenda: '/agenda',
   reuniao_resultados: '/reuniao-resultados',
   visitas: '/visitas',
   admin: '/admin/empresa',

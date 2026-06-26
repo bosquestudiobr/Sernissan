@@ -42,7 +42,10 @@ export type Database = {
       agendamentos: {
         Row: {
           bubble_id: string | null
+          cancelado: boolean
           concessionaria: string | null
+          concluido: boolean
+          concluido_em: string | null
           created_at: string
           created_by: string | null
           data_fim: string | null
@@ -59,7 +62,10 @@ export type Database = {
         }
         Insert: {
           bubble_id?: string | null
+          cancelado?: boolean
           concessionaria?: string | null
+          concluido?: boolean
+          concluido_em?: string | null
           created_at?: string
           created_by?: string | null
           data_fim?: string | null
@@ -76,7 +82,10 @@ export type Database = {
         }
         Update: {
           bubble_id?: string | null
+          cancelado?: boolean
           concessionaria?: string | null
+          concluido?: boolean
+          concluido_em?: string | null
           created_at?: string
           created_by?: string | null
           data_fim?: string | null
