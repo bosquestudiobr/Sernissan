@@ -2,7 +2,7 @@
   inicio: '/',
   gerenciamento: '/modulos/gerenciamento',
   equipe: '/modulos/equipe',
-  indicadores: '/modulos/indicadores',
+  indicadores: '/indicadores',
   solicitacoes: '/modulos/solicitacoes',
   placar: '/modulos/placar',
   agenda: '/modulos/agenda',

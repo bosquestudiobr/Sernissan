@@ -4,6 +4,7 @@ import type { CurrentUserView } from '@/lib/types/user'
 import { getCurrentUserView } from '@/server/queries/auth'
 
 import { canManageStructuralAdmin } from './admin'
+import { canAccessIndicatorObjectives } from './indicadores'
 import type { PermissionAction } from './actions'
 import {
   canAccessConcessionaria,
@@ -50,6 +51,7 @@ export function assertCan(
 
 export function canAccessRoute(user: CurrentUserView, route: string): boolean {
   if (user.ativo === false || user.aprovado === false) return false
+  if (route.startsWith('/indicadores') && !canAccessIndicatorObjectives(user.perfilNivel)) return false
   if (route.startsWith('/biblioteca-indicadores') && !canManageStructuralAdmin(user.perfilNivel)) return false
   if (route.startsWith('/admin') && !canManageStructuralAdmin(user.perfilNivel)) return false
   return true
