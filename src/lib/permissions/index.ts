@@ -6,6 +6,7 @@ import { getCurrentUserView } from '@/server/queries/auth'
 import { canManageStructuralAdmin } from './admin'
 import { canAccessIndicatorObjectives } from './indicadores'
 import { canAccessPlacar } from './placar'
+import { canAccessCompetencias } from './competencias'
 import type { PermissionAction } from './actions'
 import {
   canAccessConcessionaria,
@@ -53,6 +54,7 @@ export function assertCan(
 export function canAccessRoute(user: CurrentUserView, route: string): boolean {
   if (user.ativo === false || user.aprovado === false) return false
   if (route.startsWith('/placar') && !canAccessPlacar(user.perfilNivel)) return false
+  if (route.startsWith('/competencias') && !canAccessCompetencias(user.perfilNivel)) return false
   if (route.startsWith('/indicadores') && !canAccessIndicatorObjectives(user.perfilNivel)) return false
   if (route.startsWith('/biblioteca-indicadores') && !canManageStructuralAdmin(user.perfilNivel)) return false
   if (route.startsWith('/admin') && !canManageStructuralAdmin(user.perfilNivel)) return false
@@ -61,4 +63,5 @@ export function canAccessRoute(user: CurrentUserView, route: string): boolean {
 
 export { canManageStructuralAdmin } from './admin'
 export { canAccessSetor, canAccessGrupo, canAccessConcessionaria, canAccessOrganizationalContext }
+
 
