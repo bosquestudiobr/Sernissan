@@ -4,7 +4,7 @@
   equipe: '/modulos/equipe',
   indicadores: '/indicadores',
   solicitacoes: '/modulos/solicitacoes',
-  placar: '/modulos/placar',
+  placar: '/placar',
   agenda: '/modulos/agenda',
   reuniao_resultados: '/modulos/reuniao-resultados',
   admin: '/admin/empresa',
@@ -41,3 +41,4 @@ export function mapBubbleIconToLucide(iconKey?: string | null): string {
   if (!iconKey) return 'Circle'
   return BUBBLE_ICON_TO_LUCIDE[iconKey] ?? 'Circle'
 }
+

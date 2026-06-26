@@ -21,7 +21,7 @@ function makeUser(nivel: number): CurrentUserView {
 
 describe('sidebar dinamica (regras)', () => {
   it('resolve href de modulos conhecidos', () => {
-    expect(resolveModuleHref('placar')).toBe('/modulos/placar')
+    expect(resolveModuleHref('placar')).toBe('/placar')
     expect(resolveModuleHref('desconhecido')).toBe('/modulos/desconhecido')
   })
 
@@ -42,3 +42,4 @@ describe('sidebar dinamica (regras)', () => {
     expect(user.perfilNivel <= maxNivel).toBe(true)
   })
 })
+

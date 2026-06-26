@@ -6,7 +6,7 @@ type DbClient = SupabaseClient<Database>
 
 export async function syncJoinTable(
   supabase: DbClient,
-  table: 'pais_divisoes' | 'divisao_setores' | 'grupo_concessionarias' | 'profiles_grupos_disponiveis' | 'profiles_concessionarias_equipe' | 'profiles_areas_disponiveis' | 'indicadores_areas' | 'indicadores_funcoes',
+  table: 'pais_divisoes' | 'divisao_setores' | 'grupo_concessionarias' | 'profiles_grupos_disponiveis' | 'profiles_concessionarias_equipe' | 'profiles_areas_disponiveis' | 'indicadores_areas' | 'indicadores_funcoes' | 'placar_indicadores' | 'concessionaria_placars',
   parentKey: string,
   parentId: string,
   childKey: string,
@@ -55,3 +55,4 @@ export function parseIdList(value: FormDataEntryValue | null): string[] {
   if (!value || typeof value !== 'string' || value.trim() === '') return []
   return [...new Set(value.split(',').map((id) => id.trim()).filter(Boolean))]
 }
+
