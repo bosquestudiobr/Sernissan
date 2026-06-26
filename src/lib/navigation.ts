@@ -6,6 +6,7 @@
   solicitacoes: '/solicitacoes',
   placar: '/placar',
   agenda: '/agenda',
+  habitos: '/habitos',
   reuniao_resultados: '/reuniao-resultados',
   visitas: '/visitas',
   admin: '/admin/empresa',

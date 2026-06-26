@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -11,31 +11,6 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
-  }
-  graphql_public: {
-    Tables: {
-      [_ in never]: never
-    }
-    Views: {
-      [_ in never]: never
-    }
-    Functions: {
-      graphql: {
-        Args: {
-          extensions?: Json
-          operationName?: string
-          query?: string
-          variables?: Json
-        }
-        Returns: Json
-      }
-    }
-    Enums: {
-      [_ in never]: never
-    }
-    CompositeTypes: {
-      [_ in never]: never
-    }
   }
   public: {
     Tables: {
@@ -1755,27 +1730,125 @@ export type Database = {
       }
       habitos: {
         Row: {
+          agendamento: string | null
+          area: string | null
+          ativo: boolean
           bubble_id: string | null
+          colaborador: string | null
+          competencia_habito: string | null
+          concessionaria: string | null
+          concluido: boolean
+          concluido_em: string | null
           created_at: string
           created_by: string | null
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          empresa: string | null
+          execucoes_realizadas: number
+          funcao: string | null
           id: string
+          meta_execucoes: number | null
+          titulo: string | null
           updated_at: string
         }
         Insert: {
+          agendamento?: string | null
+          area?: string | null
+          ativo?: boolean
           bubble_id?: string | null
+          colaborador?: string | null
+          competencia_habito?: string | null
+          concessionaria?: string | null
+          concluido?: boolean
+          concluido_em?: string | null
           created_at?: string
           created_by?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          empresa?: string | null
+          execucoes_realizadas?: number
+          funcao?: string | null
           id?: string
+          meta_execucoes?: number | null
+          titulo?: string | null
           updated_at?: string
         }
         Update: {
+          agendamento?: string | null
+          area?: string | null
+          ativo?: boolean
           bubble_id?: string | null
+          colaborador?: string | null
+          competencia_habito?: string | null
+          concessionaria?: string | null
+          concluido?: boolean
+          concluido_em?: string | null
           created_at?: string
           created_by?: string | null
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          empresa?: string | null
+          execucoes_realizadas?: number
+          funcao?: string | null
           id?: string
+          meta_execucoes?: number | null
+          titulo?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "fk_habitos_agendamento_agendamentos_id"
+            columns: ["agendamento"]
+            isOneToOne: false
+            referencedRelation: "agendamentos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_habitos_area_setor_concessionaria_id"
+            columns: ["area"]
+            isOneToOne: false
+            referencedRelation: "setor_concessionaria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_habitos_colaborador_profiles_id"
+            columns: ["colaborador"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_habitos_competencia_habito_competencia_habito_id"
+            columns: ["competencia_habito"]
+            isOneToOne: false
+            referencedRelation: "competencia_habito"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_habitos_concessionaria_concessionaria_id"
+            columns: ["concessionaria"]
+            isOneToOne: false
+            referencedRelation: "concessionaria"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_habitos_empresa_empresa_id"
+            columns: ["empresa"]
+            isOneToOne: false
+            referencedRelation: "empresa"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fk_habitos_funcao_funcao_colaborador_id"
+            columns: ["funcao"]
+            isOneToOne: false
+            referencedRelation: "funcao_colaborador"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       indicadores: {
         Row: {
@@ -4331,11 +4404,7 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
-  graphql_public: {
-    Enums: {},
-  },
   public: {
     Enums: {},
   },
 } as const
-

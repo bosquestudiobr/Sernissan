@@ -194,11 +194,6 @@ function applyDateOverlap<T extends { gte: (col: string, val: string) => T; lte:
   return query
 }
 
-function matchesStatusFilter(row: AgendaRow, status?: AgendaStatus) {
-  if (!status) return true
-  return row.status === status
-}
-
 async function countParticipants(ids: string[]) {
   const map = new Map<string, number>()
   if (ids.length === 0) return map
