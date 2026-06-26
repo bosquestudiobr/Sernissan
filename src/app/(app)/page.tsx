@@ -1,19 +1,25 @@
-﻿import Link from 'next/link'
-
-import { DataCard } from '@/components/shared/DataCard'
+﻿import { DataCard } from '@/components/shared/DataCard'
 import { PageTitleActions } from '@/components/shared/PageTitleActions'
 import { signOutAction } from '@/server/actions/auth'
-import { getCurrentUserView } from '@/server/queries/auth'
+import { requireCurrentUser } from '@/lib/permissions'
+import {
+  getCurrentOrganizationalContext,
+} from '@/server/queries/organizational-context'
+import { getAllowedSidebarItems } from '@/server/queries/sidebar'
 import { Button } from '@/components/ui/button'
 
 export default async function HomePage() {
-  const user = await getCurrentUserView()
+  const user = await requireCurrentUser()
+  const [context, sidebarItems] = await Promise.all([
+    getCurrentOrganizationalContext(user.id),
+    getAllowedSidebarItems(user),
+  ])
 
   return (
-  <>
+    <>
       <PageTitleActions
         title="Inicio"
-        description="Area autenticada do SerNissan — Fase 1 (placeholder)."
+        description="Area autenticada do SerNissan com contexto organizacional ativo."
         actions={
           <form action={signOutAction}>
             <Button type="submit" variant="outline" className="h-9">
@@ -23,41 +29,71 @@ export default async function HomePage() {
         }
       />
 
-      <DataCard>
-        <dl className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-[var(--sn-muted)]">Aplicativo</dt>
-            <dd className="text-lg font-semibold text-[var(--sn-text)]">SerNissan</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-[var(--sn-muted)]">Usuario</dt>
-            <dd className="text-lg font-semibold text-[var(--sn-text)]">{user?.nome}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-[var(--sn-muted)]">E-mail</dt>
-            <dd className="text-sm text-[var(--sn-text)]">{user?.email}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-[var(--sn-muted)]">Perfil</dt>
-            <dd className="text-sm text-[var(--sn-text)]">{user?.perfil}</dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-[var(--sn-muted)]">Status</dt>
-            <dd className="text-sm text-[var(--sn-text)]">
-              {user?.ativo === false ? 'Inativo' : user?.aprovado === false ? 'Aguardando aprovacao' : 'Ativo'}
-            </dd>
-          </div>
-          <div>
-            <dt className="text-xs uppercase tracking-wide text-[var(--sn-muted)]">Ambiente</dt>
-            <dd className="text-sm font-medium text-[var(--sn-red)]">QA</dd>
-          </div>
-        </dl>
-
-        <p className="mt-6 text-sm text-[var(--sn-muted)]">
-          O header, sidebar e footer seguem o layout Bubble. Os seletores de contexto serao conectados na Fase 2.
-        </p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <DataCard>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--sn-muted)]">
+            Usuario
+          </h2>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Nome</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{user.nome}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">E-mail</dt>
+              <dd className="text-sm text-[var(--sn-text)]">{user.email}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Perfil</dt>
+              <dd className="text-sm text-[var(--sn-text)]">{user.perfilLabel}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Nivel</dt>
+              <dd className="text-sm text-[var(--sn-text)]">{user.perfilNivel}</dd>
+            </div>
+          </dl>
         </DataCard>
+
+        <DataCard>
+          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--sn-muted)]">
+            Contexto organizacional
+          </h2>
+          <dl className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Setor</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{context.setor}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-[var(--sn-muted)]">Grupo</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{context.grupo}</dd>
+            </div>
+            <div className="sm:col-span-2">
+              <dt className="text-xs text-[var(--sn-muted)]">Concessionaria</dt>
+              <dd className="font-medium text-[var(--sn-text)]">{context.concessionaria}</dd>
+            </div>
+          </dl>
+        </DataCard>
+      </div>
+
+      <DataCard className="mt-4">
+        <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide text-[var(--sn-muted)]">
+          Modulos disponiveis
+        </h2>
+        {sidebarItems.length === 0 ? (
+          <p className="text-sm text-[var(--sn-muted)]">Nenhum modulo liberado para seu perfil.</p>
+        ) : (
+          <ul className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+            {sidebarItems.map((item) => (
+              <li
+                key={item.id}
+                className="rounded-md border border-[var(--sn-border)] bg-[var(--sn-field)] px-3 py-2 text-sm text-[var(--sn-text)]"
+              >
+                {item.label}
+              </li>
+            ))}
+          </ul>
+        )}
+      </DataCard>
     </>
   )
 }
-

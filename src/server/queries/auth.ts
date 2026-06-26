@@ -1,6 +1,8 @@
 ﻿import { createClient } from '@/lib/supabase/server'
 import type { CurrentUserView } from '@/lib/types/user'
 
+import { getPerfilLabel, getPerfilNivel } from './scopes'
+
 export async function getCurrentUser() {
   const supabase = await createClient()
   const {
@@ -16,7 +18,7 @@ export async function getProfileByAuthId(authUserId: string) {
   const supabase = await createClient()
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, nome, perfil, foto, ativo, aprovado')
+    .select('id, nome, perfil, foto, ativo, aprovado, empresa')
     .eq('id', authUserId)
     .maybeSingle()
 
@@ -30,14 +32,23 @@ export async function getCurrentUserView(): Promise<CurrentUserView | null> {
 
   const profile = await getProfileByAuthId(user.id)
   const fallbackName = user.email?.split('@')[0] ?? 'Usuario'
+  const perfilDbValue = profile?.perfil ?? null
+  const [perfilNivel, perfilLabel] = await Promise.all([
+    getPerfilNivel(perfilDbValue),
+    getPerfilLabel(perfilDbValue),
+  ])
 
   return {
     id: user.id,
     email: user.email ?? '',
     nome: profile?.nome ?? fallbackName,
-    perfil: profile?.perfil ?? 'Colaborador',
+    perfil: perfilLabel,
+    perfilDbValue,
+    perfilLabel,
+    perfilNivel,
     avatarUrl: profile?.foto ?? null,
     ativo: profile?.ativo ?? null,
     aprovado: profile?.aprovado ?? null,
+    empresaId: profile?.empresa ?? null,
   }
 }

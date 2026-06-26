@@ -13,7 +13,7 @@ todos:
     status: completed
   - id: fase-2
     content: "Fase 2: Contexto organizacional + lib/permissions + sidebar dinâmica + RLS helpers"
-    status: pending
+    status: completed
   - id: fase-3
     content: "Fase 3: CRUDs admin base (empresa → concessionárias → usuários)"
     status: pending

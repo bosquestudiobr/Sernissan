@@ -1,17 +1,44 @@
 ﻿import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 
-import { AppFooter } from '@/components/app-shell/AppFooter'
-import { PageTitleActions } from '@/components/shared/PageTitleActions'
+import { AppHeader } from '@/components/app-shell/AppHeader'
 
-describe('layout smoke', () => {
-  it('renderiza PageTitleActions', () => {
-    render(<PageTitleActions title="SerNissan" description="Teste" />)
-    expect(screen.getByRole('heading', { name: 'SerNissan' })).toBeInTheDocument()
-  })
+const user = {
+  id: 'u1',
+  email: 'user@test.com',
+  nome: 'Usuario Teste',
+  perfil: 'Colaborador',
+  perfilDbValue: 'usu_rio',
+  perfilLabel: '07 - Colaborador',
+  perfilNivel: 7,
+  avatarUrl: null,
+  ativo: true,
+  aprovado: true,
+  empresaId: null,
+}
 
-  it('renderiza AppFooter com copyright', () => {
-    render(<AppFooter />)
-    expect(screen.getByText(/SERNISSAN - INDIVIDUANDO/i)).toBeInTheDocument()
+const context = {
+  setorId: 's1',
+  grupoId: 'g1',
+  concessionariaId: 'c1',
+  setor: 'Setor A',
+  grupo: 'Grupo A',
+  concessionaria: 'Concessionaria A',
+}
+
+const options = {
+  setores: [{ id: 's1', label: 'Setor A' }],
+  grupos: [{ id: 'g1', label: 'Grupo A', setorId: 's1' }],
+  concessionarias: [{ id: 'c1', label: 'Concessionaria A', grupoId: 'g1' }],
+}
+
+describe('AppHeader com contexto', () => {
+  it('renderiza seletores e usuario', () => {
+    render(<AppHeader user={user} context={context} options={options} />)
+    expect(screen.getByText('SERNISSAN')).toBeInTheDocument()
+    expect(screen.getByText('Usuario Teste')).toBeInTheDocument()
+    expect(screen.getByText('Setor')).toBeInTheDocument()
+    expect(screen.getByText('Grupo')).toBeInTheDocument()
+    expect(screen.getByText('Concessionaria')).toBeInTheDocument()
   })
 })

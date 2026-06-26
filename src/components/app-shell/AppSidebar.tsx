@@ -2,11 +2,15 @@
 
 import {
   BarChart3,
+  BookOpen,
+  Calendar,
   ChevronLeft,
   ChevronRight,
+  Circle,
   FileText,
   Grid3x3,
   Home,
+  LayoutGrid,
   Settings,
   Trophy,
   type LucideIcon,
@@ -16,7 +20,7 @@ import { usePathname } from 'next/navigation'
 import { useState } from 'react'
 
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { SIDEBAR_MODULES } from '@/lib/navigation'
+import type { AppModule } from '@/lib/types/user'
 import { cn } from '@/lib/utils'
 
 const ICONS: Record<string, LucideIcon> = {
@@ -26,13 +30,18 @@ const ICONS: Record<string, LucideIcon> = {
   Grid3x3,
   FileText,
   Settings,
+  LayoutGrid,
+  Calendar,
+  BookOpen,
+  Circle,
 }
 
 type AppSidebarProps = {
+  items: AppModule[]
   activeModuleId?: string
 }
 
-export function AppSidebar({ activeModuleId }: AppSidebarProps) {
+export function AppSidebar({ items, activeModuleId }: AppSidebarProps) {
   const pathname = usePathname()
   const [expanded, setExpanded] = useState(false)
 
@@ -55,9 +64,12 @@ export function AppSidebar({ activeModuleId }: AppSidebarProps) {
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 px-2 pb-4">
-        {SIDEBAR_MODULES.map((item) => {
+        {items.map((item) => {
           const Icon = ICONS[item.icon] ?? Home
-          const isActive = item.id === activeModuleId || (item.href !== '#' && pathname === item.href)
+          const isActive =
+            item.id === activeModuleId ||
+            pathname === item.href ||
+            (item.href !== '/' && pathname.startsWith(item.href))
 
           const link = (
             <Link
