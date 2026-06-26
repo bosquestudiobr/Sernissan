@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Next.js
+.next/
+out/
+.vercel/
+
+# Env
+.env
+.env.*
+!.env.example
+
+# Supabase local
+supabase/.branches/
+supabase/.temp/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+
+# OS/IDE
+.DS_Store
+.idea/
+.vscode/settings.json
+
+# Generated
+coverage/
+playwright-report/
+test-results/
+tsconfig.tsbuildinfo
