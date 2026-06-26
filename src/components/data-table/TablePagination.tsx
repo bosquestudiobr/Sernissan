@@ -10,15 +10,16 @@ type TablePaginationProps = {
   pageCount: number
   total: number
   className?: string
+  pageParam?: string
 }
 
-export function TablePagination({ page, pageCount, total, className }: TablePaginationProps) {
+export function TablePagination({ page, pageCount, total, className, pageParam = 'page' }: TablePaginationProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
   function goToPage(nextPage: number) {
     const params = new URLSearchParams(searchParams.toString())
-    params.set('page', String(nextPage))
+    params.set(pageParam, String(nextPage))
     router.push(`?${params.toString()}`)
   }
 
@@ -38,3 +39,4 @@ export function TablePagination({ page, pageCount, total, className }: TablePagi
     </div>
   )
 }
+
