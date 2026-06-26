@@ -85,3 +85,36 @@ Definição: **indicadores do placar = `indicadores WHERE placar = placarId`**. 
 - Tabela de auditoria de recálculo.
 - Dashboard visual e gráficos.
 - Confirmar regras de cap/superação e peso por importância.
+
+---
+
+## Fase 6C - UI operacional, auditoria e performance
+
+### O que foi finalizado na 6C
+- Rota de detalhe `/placar/[id]` (Server Component) com: resumo em cards, status de calculo, ranking, indicadores vinculados e auditoria.
+- Acoes operacionais no detalhe: Recalcular tudo / Indicadores / Ranking, Finalizar e Reabrir (Client Components).
+- Link "Abrir" na listagem `/placar` para o detalhe (disponivel inclusive para perfis somente leitura).
+- Coluna de pontos e colaboradores na listagem (resumo simples).
+
+### Decisoes de UX (identidade Bubble preservada)
+- Card branco (`DataCard`), tabela densa (`ServerDataTable`), filtros compactos, botoes pretos/vermelhos, layout desktop-first.
+- Acoes destrutivas (excluir/finalizar/reabrir) com `ConfirmDialog`.
+- Loading state por botao (animacao) e disabled quando placar finalizado.
+- Texto de ajuda explicando idempotencia do recalculo; alerta ambar quando ha indicadores sem valor (regra de calculo incompleta) ou nenhum indicador vinculado.
+- Organizacao por secoes (equivalente a abas) em vez de tabs, para manter render server-side.
+
+### Auditoria (migration `0005_placar_audit_performance.sql`)
+- Tabela `placar_recalculation_logs` (`id`, `placar_id`, `profile_id`, `action`, `summary jsonb`, `created_at`).
+- Registro best-effort em todas as acoes (recalcular/finalizar/reabrir); falha de log nao quebra a operacao.
+- Exibida no painel de auditoria do detalhe. Aplicada via Supabase CLI no QA; `database.types.ts` regenerado.
+
+### Performance
+- `recalculatePoints` passou de updates linha-a-linha para updates em lote agrupados por pontuacao distinta (1 update por valor de `pontos_ranking`).
+- Ranking ainda atualiza posicao por colaborador (poucos grupos). Recalculo via RPC SQL em lote permanece como evolucao futura (volume QA baixo).
+
+### Limitacoes restantes (para producao / Fase 7+)
+- Clonagem de indicadores por colaborador segue pendente (FK `indicadores.placar` de valor unico).
+- `valor` realizado depende de import CSV/API (ainda nao implementado).
+- Cap de atingimento em 100% e peso por `importancia` a confirmar com regras Bubble.
+- RLS production pendente; auditoria sem RLS.
+- Sem exportacao PDF/CSV e sem dashboard analitico (fora do escopo 6C).

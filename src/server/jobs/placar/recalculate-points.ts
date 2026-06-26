@@ -35,6 +35,13 @@ export function computeIndicatorPoints(input: IndicatorPointInput): number {
   return round4(peso * achievement)
 }
 
+/**
+ * Recalcula pontos por indicador do placar.
+ *
+ * Performance (Fase 6C): atualizacoes em lote agrupadas por pontuacao distinta
+ * (1 update por valor de pontos_ranking) em vez de update linha-a-linha.
+ * Continua idempotente: pontos derivam apenas de (meta, valor, peso).
+ */
 export async function recalculatePoints(
   supabase: PlacarJobClient,
   placarId: string,
@@ -47,14 +54,21 @@ export async function recalculatePoints(
 
   const rows = data ?? []
   let total = 0
+  const idsByScore = new Map<number, string[]>()
 
   for (const row of rows) {
     const score = computeIndicatorPoints({ meta: row.meta, valor: row.valor, peso: row.pontos })
     total += score
+    const ids = idsByScore.get(score) ?? []
+    ids.push(row.id)
+    idsByScore.set(score, ids)
+  }
+
+  for (const [score, ids] of idsByScore.entries()) {
     const { error: updateError } = await supabase
       .from('indicadores')
       .update({ pontos_ranking: score })
-      .eq('id', row.id)
+      .in('id', ids)
     if (updateError) throw updateError
   }
 

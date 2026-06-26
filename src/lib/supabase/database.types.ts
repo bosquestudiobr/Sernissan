@@ -2362,6 +2362,41 @@ export type Database = {
           },
         ]
       }
+      placar_recalculation_logs: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          placar_id: string
+          profile_id: string | null
+          summary: Json
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          placar_id: string
+          profile_id?: string | null
+          summary?: Json
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          placar_id?: string
+          profile_id?: string | null
+          summary?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "placar_recalculation_logs_placar_id_fkey"
+            columns: ["placar_id"]
+            isOneToOne: false
+            referencedRelation: "placar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           aprovado: boolean | null

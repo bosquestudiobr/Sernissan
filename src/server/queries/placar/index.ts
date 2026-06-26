@@ -362,6 +362,8 @@ export async function getPlacarById(id: string, ctx: PlacarQueryContext): Promis
   }
 }
 
+export const getPlacarDetail = getPlacarById
+
 export async function getPlacarIndicators(placarId: string): Promise<PlacarIndicatorOption[]> {
   const supabase = await createClient()
   const { data: links, error: linkError } = await supabase
@@ -544,3 +546,89 @@ export async function getPlacarRecalculationPreview(placarId: string): Promise<P
     totalPontosPrevisto: Math.round((previsto + Number.EPSILON) * 10000) / 10000,
   }
 }
+
+export type PlacarIndicatorSummaryRow = {
+  id: string
+  nome: string | null
+  sigla: string | null
+  meta: number | null
+  valor: number | null
+  pontos: number | null
+  pontosRanking: number | null
+  colaboradorNome: string | null
+  ativoPlacar: boolean | null
+}
+
+export async function getPlacarIndicatorSummary(placarId: string): Promise<PlacarIndicatorSummaryRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('indicadores')
+    .select('id, nome, sigla, meta, valor, pontos, pontos_ranking, colaborador_user, ativo_placar, ordem')
+    .eq('placar', placarId)
+    .order('ordem', { ascending: true })
+  if (error) throw error
+
+  const rows = data ?? []
+  const colaboradorIds = [...new Set(rows.map((r) => r.colaborador_user).filter(Boolean) as string[])]
+  const names = new Map<string, string>()
+  if (colaboradorIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, nome')
+      .in('id', colaboradorIds)
+    if (profilesError) throw profilesError
+    for (const p of profiles ?? []) names.set(p.id, p.nome ?? p.id)
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    nome: r.nome,
+    sigla: r.sigla,
+    meta: r.meta,
+    valor: r.valor,
+    pontos: r.pontos,
+    pontosRanking: r.pontos_ranking,
+    colaboradorNome: r.colaborador_user ? names.get(r.colaborador_user) ?? null : null,
+    ativoPlacar: r.ativo_placar,
+  }))
+}
+
+export type PlacarAuditLogRow = {
+  id: string
+  action: string
+  summary: Record<string, unknown>
+  createdAt: string
+  profileNome: string | null
+}
+
+export async function getPlacarAuditLog(placarId: string, limit = 20): Promise<PlacarAuditLogRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('placar_recalculation_logs')
+    .select('id, action, summary, created_at, profile_id')
+    .eq('placar_id', placarId)
+    .order('created_at', { ascending: false })
+    .limit(limit)
+  if (error) throw error
+
+  const rows = data ?? []
+  const profileIds = [...new Set(rows.map((r) => r.profile_id).filter(Boolean) as string[])]
+  const names = new Map<string, string>()
+  if (profileIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, nome')
+      .in('id', profileIds)
+    if (profilesError) throw profilesError
+    for (const p of profiles ?? []) names.set(p.id, p.nome ?? p.id)
+  }
+
+  return rows.map((r) => ({
+    id: r.id,
+    action: r.action,
+    summary: (r.summary as Record<string, unknown> | null) ?? {},
+    createdAt: r.created_at,
+    profileNome: r.profile_id ? names.get(r.profile_id) ?? null : null,
+  }))
+}
+

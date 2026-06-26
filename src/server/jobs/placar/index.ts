@@ -4,3 +4,6 @@ export type { IndicatorPointInput } from '@/server/jobs/placar/recalculate-point
 export { computeRanking, recalculateRanking } from '@/server/jobs/placar/recalculate-ranking'
 export { recalculateIndicators } from '@/server/jobs/placar/recalculate-indicators'
 export { recalculatePlacar } from '@/server/jobs/placar/recalculate-placar'
+export { recordPlacarRecalculation } from '@/server/jobs/placar/audit'
+export type { PlacarRecalcAction } from '@/server/jobs/placar/audit'
+

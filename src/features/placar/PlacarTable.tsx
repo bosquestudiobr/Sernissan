@@ -1,6 +1,7 @@
 ﻿'use client'
 
-import { Pencil, Trash2, CheckCircle2, RotateCcw } from 'lucide-react'
+import Link from 'next/link'
+import { Pencil, Trash2, CheckCircle2, RotateCcw, Eye } from 'lucide-react'
 
 import { ConfirmDialog } from '@/components/admin/ConfirmDialog'
 import { ServerDataTable, type DataTableColumn } from '@/components/data-table/ServerDataTable'
@@ -75,56 +76,63 @@ export function PlacarTable({
       data={data}
       emptyTitle="Nenhum placar encontrado"
       emptyDescription="Ajuste os filtros ou crie um novo placar."
-      rowActions={
-        canEdit
-          ? (row) => (
-              <div className="flex items-center justify-end gap-1">
-                <PlacarRecalcButton placarId={row.id} action={recalcAction} disabled={row.finalizado === true} />
-                <Button type="button" size="sm" variant="outline" className="h-8 px-2" onClick={() => onEdit(row)}>
-                  <Pencil className="size-3.5" />
-                </Button>
-                {row.finalizado ? (
+      rowActions={(row) => (
+        <div className="flex items-center justify-end gap-1">
+          <Link
+            href={`/placar/${row.id}`}
+            className="inline-flex h-8 items-center rounded-md border border-[var(--sn-border)] px-2 hover:bg-[var(--sn-field)]"
+            title="Abrir detalhes"
+          >
+            <Eye className="size-3.5" />
+          </Link>
+          {canEdit ? (
+            <>
+              <PlacarRecalcButton placarId={row.id} action={recalcAction} disabled={row.finalizado === true} />
+              <Button type="button" size="sm" variant="outline" className="h-8 px-2" onClick={() => onEdit(row)}>
+                <Pencil className="size-3.5" />
+              </Button>
+              {row.finalizado ? (
+                <ConfirmDialog
+                  title="Reabrir placar"
+                  description="Confirma reabrir este placar finalizado?"
+                  confirmLabel="Reabrir"
+                  onConfirm={() => runWithId(reopenAction, row.id)}
+                  trigger={
+                    <Button type="button" size="sm" variant="outline" className="h-8 px-2">
+                      <RotateCcw className="size-3.5" />
+                    </Button>
+                  }
+                />
+              ) : (
+                <>
                   <ConfirmDialog
-                    title="Reabrir placar"
-                    description="Confirma reabrir este placar finalizado?"
-                    confirmLabel="Reabrir"
-                    onConfirm={() => runWithId(reopenAction, row.id)}
+                    title="Finalizar placar"
+                    description="Confirma finalizar este placar? Ele ficara bloqueado para recalculo."
+                    confirmLabel="Finalizar"
+                    onConfirm={() => runWithId(finalizeAction, row.id)}
                     trigger={
-                      <Button type="button" size="sm" variant="outline" className="h-8 px-2">
-                        <RotateCcw className="size-3.5" />
+                      <Button type="button" size="sm" variant="outline" className="h-8 px-2 text-emerald-700">
+                        <CheckCircle2 className="size-3.5" />
                       </Button>
                     }
                   />
-                ) : (
-                  <>
-                    <ConfirmDialog
-                      title="Finalizar placar"
-                      description="Confirma finalizar este placar? Ele ficara bloqueado para recalculo."
-                      confirmLabel="Finalizar"
-                      onConfirm={() => runWithId(finalizeAction, row.id)}
-                      trigger={
-                        <Button type="button" size="sm" variant="outline" className="h-8 px-2 text-emerald-700">
-                          <CheckCircle2 className="size-3.5" />
-                        </Button>
-                      }
-                    />
-                    <ConfirmDialog
-                      title="Excluir placar"
-                      description="Confirma a exclusao deste placar aberto?"
-                      confirmLabel="Excluir"
-                      onConfirm={() => runWithId(deleteAction, row.id)}
-                      trigger={
-                        <Button type="button" size="sm" variant="outline" className="h-8 px-2 text-[var(--sn-red)]">
-                          <Trash2 className="size-3.5" />
-                        </Button>
-                      }
-                    />
-                  </>
-                )}
-              </div>
-            )
-          : undefined
-      }
+                  <ConfirmDialog
+                    title="Excluir placar"
+                    description="Confirma a exclusao deste placar aberto?"
+                    confirmLabel="Excluir"
+                    onConfirm={() => runWithId(deleteAction, row.id)}
+                    trigger={
+                      <Button type="button" size="sm" variant="outline" className="h-8 px-2 text-[var(--sn-red)]">
+                        <Trash2 className="size-3.5" />
+                      </Button>
+                    }
+                  />
+                </>
+              )}
+            </>
+          ) : null}
+        </div>
+      )}
     />
   )
 }
