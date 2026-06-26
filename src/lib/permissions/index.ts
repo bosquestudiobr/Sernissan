@@ -3,6 +3,7 @@
 import type { CurrentUserView } from '@/lib/types/user'
 import { getCurrentUserView } from '@/server/queries/auth'
 
+import { canManageStructuralAdmin } from './admin'
 import type { PermissionAction } from './actions'
 import {
   canAccessConcessionaria,
@@ -20,6 +21,12 @@ export async function requireCurrentUser(): Promise<CurrentUserView> {
   return user
 }
 
+export async function requireAdminAccess(): Promise<CurrentUserView> {
+  const user = await requireCurrentUser()
+  if (!canManageStructuralAdmin(user.perfilNivel)) redirect('/acesso-negado')
+  return user
+}
+
 export function assertCan(
   user: CurrentUserView,
   action: PermissionAction,
@@ -27,6 +34,10 @@ export function assertCan(
   context?: OrganizationalContextInput,
 ): void {
   if (user.ativo === false || user.aprovado === false) {
+    throw new Error('FORBIDDEN')
+  }
+
+  if (action === 'admin:manage' && !canManageStructuralAdmin(user.perfilNivel)) {
     throw new Error('FORBIDDEN')
   }
 
@@ -39,9 +50,9 @@ export function assertCan(
 
 export function canAccessRoute(user: CurrentUserView, route: string): boolean {
   if (user.ativo === false || user.aprovado === false) return false
-  void route
+  if (route.startsWith('/admin') && !canManageStructuralAdmin(user.perfilNivel)) return false
   return true
 }
 
+export { canManageStructuralAdmin } from './admin'
 export { canAccessSetor, canAccessGrupo, canAccessConcessionaria, canAccessOrganizationalContext }
-

@@ -15,8 +15,8 @@ todos:
     content: "Fase 2: Contexto organizacional + lib/permissions + sidebar dinâmica + RLS helpers"
     status: completed
   - id: fase-3
-    content: "Fase 3: CRUDs admin base (empresa → concessionárias → usuários)"
-    status: pending
+    content: "Fase 3A: CRUDs admin base (empresa → concessionárias) — concluída"
+    status: completed
   - id: fase-4
     content: "Fase 4: Biblioteca de indicadores (referência visual Bubble)"
     status: pending
