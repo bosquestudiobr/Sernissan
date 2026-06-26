@@ -139,3 +139,39 @@ erDiagram
 - Selecao de mapas por calibracao (`competencia_calibracao_mapas`) — hoje a matriz deriva da funcao.
 - Exportacao PDF e dashboard.
 - Indice UNIQUE para upsert nativo.
+
+---
+
+## Fase 7C - Refinamento, performance e finalizacao
+
+### Unicidade (resolvida)
+- `calibracao_resultado` verificada via MCP (read-only): 0 linhas, 0 duplicados por `(calibracao, habito)`.
+- Migration `0007_competencias_finalize_performance.sql` cria indice UNIQUE `(calibracao, habito)`.
+- Upsert da aplicacao migrado para `upsert(..., { onConflict: 'calibracao,habito' })`, agrupando celulas por habito (1 linha por habito, multiplas etapas no mesmo payload). Idempotente e seguro contra duplicidade.
+
+### Status / finalizacao (implementado)
+- Colunas novas em `competencia_calibracao`: `finalizada boolean default false`, `data_finalizada timestamptz` (migration 0007). Justificado: o schema Bubble nao tinha status.
+- `finalizeCalibrationAction` (nivel <= 6, no escopo) e `reopenCalibrationAction` (somente admin estrutural, nivel <= 4).
+- Edicao bloqueada quando finalizada: `saveCalibrationCellAction`, `saveCalibrationMatrixAction` e `resetCalibrationCellAction` lancam `FINALIZED`.
+- `canEdit = escopo && nivel<=6 && !finalizada`.
+
+### Performance / resumo (implementado)
+- Lib pura `src/lib/competencias/calibration-performance.ts`: `computeCalibrationPerformance` (Sim/Parcial/Nao, respondidos, pontos e % por etapa; % de conclusao geral) e `buildCalibrationValidationAlerts`.
+- Queries: `getCalibrationPerformanceSummary`, `getCalibrationProgress`, `getCalibrationStatus`, `countMatrixHabitos`.
+- Componentes: `CalibrationProgressCards`, `CalibrationPerformanceSummary`, `CalibrationStageProgress`, `CalibrationValidationAlerts`, `CalibrationReadOnlyBanner`, `CalibrationMatrixToolbar`, `CalibrationFinalizeActions`, `CalibrationPdfPlaceholderButton`.
+
+### PDF (placeholder)
+- Botao "PDF" desabilitado (`CalibrationPdfPlaceholderButton`) na toolbar. Sem dependencia pesada.
+- Plano para PDF real (fase futura): rota imprimivel server-side (CSS print) ou geracao via Edge Function; evitar bundlar libs pesadas no client.
+
+### UX
+- Card do colaborador no topo, cards de resumo, alertas de validacao, banner de somente leitura, toolbar compacta (legenda + PDF + finalizar/reabrir), matriz densa com scroll horizontal, resumo por etapa e barras de progresso. Cores suaves e botoes pretos/vermelhos preservados.
+
+### Permissoes
+- Visualizacao: escopo ou self (somente leitura). Edicao: nivel <= 6 no escopo e nao finalizada. Reabertura: admin estrutural. Inativo/nao aprovado bloqueado. Fora do escopo (nao-self): `/acesso-negado`.
+
+### Limitacoes restantes / pendencias para producao
+- PDF real e dashboard grafico avancado.
+- Performance final ponderada por `peso`/`calibracao_cores` (faixas) ainda nao calculada (apenas contagens/pontos por etapa).
+- Selecao de mapas por calibracao (`competencia_calibracao_mapas`) ainda nao usada; matriz deriva da funcao.
+- RLS production.

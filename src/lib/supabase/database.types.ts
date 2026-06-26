@@ -285,8 +285,10 @@ export type Database = {
           created_by: string | null
           data_autocalibracao: string | null
           data_calibracao: string | null
+          data_finalizada: string | null
           data_follow_up: string | null
           data_lider: string | null
+          finalizada: boolean
           followup: string[]
           id: string
           lider: string[]
@@ -301,8 +303,10 @@ export type Database = {
           created_by?: string | null
           data_autocalibracao?: string | null
           data_calibracao?: string | null
+          data_finalizada?: string | null
           data_follow_up?: string | null
           data_lider?: string | null
+          finalizada?: boolean
           followup?: string[]
           id?: string
           lider?: string[]
@@ -317,8 +321,10 @@ export type Database = {
           created_by?: string | null
           data_autocalibracao?: string | null
           data_calibracao?: string | null
+          data_finalizada?: string | null
           data_follow_up?: string | null
           data_lider?: string | null
+          finalizada?: boolean
           followup?: string[]
           id?: string
           lider?: string[]

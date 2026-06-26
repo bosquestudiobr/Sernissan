@@ -1,5 +1,7 @@
 ﻿import { createClient } from '@/lib/supabase/server'
 import { getPerfilLabel } from '@/server/queries/scopes'
+import { computeCalibrationPerformance } from '@/lib/competencias/calibration-performance'
+import type { CalibrationPerformance } from '@/lib/competencias/calibration-performance'
 
 export type CalibrationStage = 'autocalibracao' | 'lider' | 'follow_up'
 
@@ -53,6 +55,8 @@ export type CalibrationMatrix = {
   hasMaps: boolean
   groups: CalibrationMatrixGroup[]
   lastUpdated: string | null
+  finalizada: boolean
+  dataFinalizada: string | null
 }
 
 export function parseCalibrationMatrixParams(
@@ -135,11 +139,11 @@ export async function getCalibrationProfile(profileId: string): Promise<Calibrat
 export async function getCalibrationByColaborador(
   profileId: string,
   concessionariaId?: string | null,
-): Promise<{ id: string; updated_at: string } | null> {
+): Promise<{ id: string; updated_at: string; finalizada: boolean; data_finalizada: string | null } | null> {
   const supabase = await createClient()
   let query = supabase
     .from('competencia_calibracao')
-    .select('id, updated_at')
+    .select('id, updated_at, finalizada, data_finalizada')
     .eq('colaborador', profileId)
     .order('created_at', { ascending: false })
     .limit(1)
@@ -189,7 +193,7 @@ export async function getCalibrationMatrix(
   const supabase = await createClient()
 
   if (!profile.funcaoId) {
-    return { calibracaoId: null, hasMaps: false, groups: [], lastUpdated: null }
+    return { calibracaoId: null, hasMaps: false, groups: [], lastUpdated: null, finalizada: false, dataFinalizada: null }
   }
 
   const { data: maps, error: mapsError } = await supabase
@@ -201,7 +205,7 @@ export async function getCalibrationMatrix(
 
   const mapIds = (maps ?? []).map((m) => m.id)
   if (mapIds.length === 0) {
-    return { calibracaoId: null, hasMaps: false, groups: [], lastUpdated: null }
+    return { calibracaoId: null, hasMaps: false, groups: [], lastUpdated: null, finalizada: false, dataFinalizada: null }
   }
 
   const { data: links, error: linksError } = await supabase
@@ -265,5 +269,64 @@ export async function getCalibrationMatrix(
     hasMaps: true,
     groups,
     lastUpdated,
+    finalizada: calibration?.finalizada ?? false,
+    dataFinalizada: calibration?.data_finalizada ?? null,
   }
+}
+
+
+export type CalibrationStatusView = {
+  finalizada: boolean
+  dataFinalizada: string | null
+  lastUpdated: string | null
+}
+
+export async function getCalibrationStatus(calibracaoId: string | null): Promise<CalibrationStatusView> {
+  if (!calibracaoId) return { finalizada: false, dataFinalizada: null, lastUpdated: null }
+  const supabase = await createClient()
+  const [{ data, error }, lastUpdated] = await Promise.all([
+    supabase.from('competencia_calibracao').select('finalizada, data_finalizada').eq('id', calibracaoId).maybeSingle(),
+    getCalibrationLastUpdated(calibracaoId),
+  ])
+  if (error) throw error
+  return {
+    finalizada: data?.finalizada ?? false,
+    dataFinalizada: data?.data_finalizada ?? null,
+    lastUpdated,
+  }
+}
+
+async function getCalibrationResultRows(calibracaoId: string) {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('calibracao_resultado')
+    .select('opcao_colaborador, opcao_lider, opcao_follow_up, pontos_autocalibracao, pontos_lider, pontos_follow_up')
+    .eq('calibracao', calibracaoId)
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getCalibrationPerformanceSummary(
+  calibracaoId: string | null,
+  totalHabitos: number,
+): Promise<CalibrationPerformance> {
+  if (!calibracaoId) return computeCalibrationPerformance([], totalHabitos)
+  const rows = await getCalibrationResultRows(calibracaoId)
+  return computeCalibrationPerformance(rows, totalHabitos)
+}
+
+export async function getCalibrationProgress(
+  calibracaoId: string | null,
+  totalHabitos: number,
+): Promise<{ percentComplete: number; perStagePercent: Record<string, number> }> {
+  const performance = await getCalibrationPerformanceSummary(calibracaoId, totalHabitos)
+  const perStagePercent: Record<string, number> = {}
+  for (const [stage, info] of Object.entries(performance.perStage)) {
+    perStagePercent[stage] = info.percent
+  }
+  return { percentComplete: performance.percentComplete, perStagePercent }
+}
+
+export function countMatrixHabitos(matrix: CalibrationMatrix): number {
+  return matrix.groups.reduce((acc, g) => acc + g.rows.length, 0)
 }

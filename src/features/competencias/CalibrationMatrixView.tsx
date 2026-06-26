@@ -5,9 +5,14 @@ import { useRouter } from 'next/navigation'
 
 import { DataCard } from '@/components/shared/DataCard'
 import { CalibrationCollaboratorCard } from '@/features/competencias/CalibrationCollaboratorCard'
-import { CalibrationLegend } from '@/features/competencias/CalibrationLegend'
+import { CalibrationProgressCards } from '@/features/competencias/CalibrationProgressCards'
+import { CalibrationValidationAlerts } from '@/features/competencias/CalibrationValidationAlerts'
+import { CalibrationReadOnlyBanner } from '@/features/competencias/CalibrationReadOnlyBanner'
+import { CalibrationMatrixToolbar } from '@/features/competencias/CalibrationMatrixToolbar'
 import { CalibrationMatrixTable } from '@/features/competencias/CalibrationMatrixTable'
 import { CalibrationSaveBar } from '@/features/competencias/CalibrationSaveBar'
+import { CalibrationPerformanceSummary } from '@/features/competencias/CalibrationPerformanceSummary'
+import { CalibrationStageProgress } from '@/features/competencias/CalibrationStageProgress'
 import type {
   CalibrationMatrix,
   CalibrationProfileView,
@@ -15,6 +20,7 @@ import type {
   CalibrationStageInfo,
 } from '@/server/queries/competencias/calibration'
 import type { CalibrationActionState } from '@/server/actions/competencias/calibration'
+import type { CalibrationAlert, CalibrationPerformance } from '@/lib/competencias/calibration-performance'
 
 type Option = { value: string; label: string }
 type ActionFn = (prev: CalibrationActionState, formData: FormData) => Promise<CalibrationActionState>
@@ -24,8 +30,13 @@ type CalibrationMatrixViewProps = {
   matrix: CalibrationMatrix
   stages: CalibrationStageInfo[]
   options: Option[]
+  performance: CalibrationPerformance
+  alerts: CalibrationAlert[]
   canEdit: boolean
+  canReopen: boolean
   saveMatrixAction: ActionFn
+  finalizeAction: ActionFn
+  reopenAction: ActionFn
 }
 
 function cellKey(habitoId: string, stage: CalibrationStage) {
@@ -37,8 +48,13 @@ export function CalibrationMatrixView({
   matrix,
   stages,
   options,
+  performance,
+  alerts,
   canEdit,
+  canReopen,
   saveMatrixAction,
+  finalizeAction,
+  reopenAction,
 }: CalibrationMatrixViewProps) {
   const router = useRouter()
   const [pending, startTransition] = useTransition()
@@ -85,7 +101,7 @@ export function CalibrationMatrixView({
       fd.set('profileId', profile.id)
       fd.set('cells', JSON.stringify(cells))
       const result = await saveMatrixAction({ ok: false }, fd)
-      setMessage(result.message ?? null)
+      setMessage(result.summary ?? result.message ?? null)
       setError(!result.ok)
       if (result.ok) {
         setBaseline({ ...responses })
@@ -98,6 +114,12 @@ export function CalibrationMatrixView({
     <div className="space-y-4">
       <CalibrationCollaboratorCard profile={profile} hasCalibration={matrix.calibracaoId !== null} lastUpdated={matrix.lastUpdated} />
 
+      <CalibrationProgressCards performance={performance} />
+
+      <CalibrationValidationAlerts alerts={alerts} />
+
+      {!canEdit ? <CalibrationReadOnlyBanner finalizada={matrix.finalizada} /> : null}
+
       {!matrix.hasMaps ? (
         <DataCard>
           <p className="py-6 text-center text-sm text-[var(--sn-muted)]">
@@ -105,25 +127,45 @@ export function CalibrationMatrixView({
           </p>
         </DataCard>
       ) : (
-        <DataCard className="space-y-4">
-          <CalibrationLegend />
-          <CalibrationMatrixTable
-            groups={matrix.groups}
-            stages={stages}
-            options={options}
-            canEdit={canEdit}
-            getValue={getValue}
-            onChange={onChange}
-          />
-          <CalibrationSaveBar
-            dirtyCount={dirtyKeys.length}
-            pending={pending}
-            message={message}
-            error={error}
-            canEdit={canEdit}
-            onSave={onSave}
-          />
-        </DataCard>
+        <>
+          <DataCard className="space-y-4">
+            <CalibrationMatrixToolbar
+              profileId={profile.id}
+              finalizada={matrix.finalizada}
+              canEdit={canEdit}
+              canReopen={canReopen}
+              finalizeAction={finalizeAction}
+              reopenAction={reopenAction}
+            />
+            <CalibrationMatrixTable
+              groups={matrix.groups}
+              stages={stages}
+              options={options}
+              canEdit={canEdit}
+              getValue={getValue}
+              onChange={onChange}
+            />
+            <CalibrationSaveBar
+              dirtyCount={dirtyKeys.length}
+              pending={pending}
+              message={message}
+              error={error}
+              canEdit={canEdit}
+              onSave={onSave}
+            />
+          </DataCard>
+
+          <DataCard className="grid gap-4 lg:grid-cols-2">
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--sn-text)]">Resumo por etapa</p>
+              <CalibrationPerformanceSummary performance={performance} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm font-medium text-[var(--sn-text)]">Progresso</p>
+              <CalibrationStageProgress performance={performance} />
+            </div>
+          </DataCard>
+        </>
       )}
     </div>
   )

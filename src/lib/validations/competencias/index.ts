@@ -93,3 +93,11 @@ export const CalibrationStatusSchema = z.object({
   status: z.enum(['aberta', 'finalizada']),
 })
 
+
+export const CalibrationFinalizeSchema = z.object({ profileId: uuid })
+export const CalibrationReopenSchema = z.object({ profileId: uuid })
+export const CalibrationPerformanceParamsSchema = z.object({ profileId: uuid })
+export const CalibrationValidationAlertSchema = z.object({
+  level: z.enum(['info', 'warning']),
+  message: z.string().min(1),
+})

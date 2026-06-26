@@ -2,22 +2,34 @@
 
 import { revalidatePath } from 'next/cache'
 
-import { canEditCalibration } from '@/lib/permissions/competencias'
+import { canEditCalibration, canManageCompetencias } from '@/lib/permissions/competencias'
 import { requireCurrentUser } from '@/lib/permissions'
 import { canAccessConcessionaria, isHighPrivilegeScope } from '@/lib/permissions/scopes'
 import { createClient } from '@/lib/supabase/server'
 import {
   CalibrationCellSchema,
+  CalibrationFinalizeSchema,
   CalibrationMatrixSaveSchema,
+  CalibrationReopenSchema,
   CalibrationResetCellSchema,
 } from '@/lib/validations/competencias'
 import { getUserScopes } from '@/server/queries/scopes'
-import { getCalibrationOptions, CALIBRATION_STAGE_COLUMNS } from '@/server/queries/competencias/calibration'
+import {
+  getCalibrationMatrix,
+  getCalibrationOptions,
+  getCalibrationPerformanceSummary,
+  getCalibrationProfile,
+  countMatrixHabitos,
+  CALIBRATION_STAGE_COLUMNS,
+} from '@/server/queries/competencias/calibration'
 import type { CalibrationStage } from '@/server/queries/competencias/calibration'
+import { buildCalibrationValidationAlerts } from '@/lib/competencias/calibration-performance'
 
 export type CalibrationActionState = {
   ok: boolean
   message?: string
+  summary?: string
+  alerts?: string[]
   fieldErrors?: Record<string, string[] | undefined>
 }
 
@@ -26,18 +38,17 @@ function fieldErrors(error: { flatten: () => { fieldErrors: Record<string, strin
 }
 
 function errorState(err: unknown, fallback: string): CalibrationActionState {
-  if (err instanceof Error && err.message === 'FORBIDDEN') {
-    return { ok: false, message: 'Sem permissao para esta operacao.' }
-  }
-  if (err instanceof Error && err.message === 'NOT_FOUND') {
-    return { ok: false, message: 'Colaborador nao encontrado.' }
-  }
+  if (err instanceof Error && err.message === 'FORBIDDEN') return { ok: false, message: 'Sem permissao para esta operacao.' }
+  if (err instanceof Error && err.message === 'NOT_FOUND') return { ok: false, message: 'Colaborador nao encontrado.' }
+  if (err instanceof Error && err.message === 'FINALIZED') return { ok: false, message: 'Calibracao finalizada: reabra antes de editar.' }
   return { ok: false, message: fallback }
 }
 
-async function guardCalibration(profileId: string) {
+async function guardCalibration(profileId: string, requireAdmin = false) {
   const user = await requireCurrentUser()
-  if (!canEditCalibration(user.perfilNivel)) throw new Error('FORBIDDEN')
+  if (requireAdmin ? !canManageCompetencias(user.perfilNivel) : !canEditCalibration(user.perfilNivel)) {
+    throw new Error('FORBIDDEN')
+  }
   const scopes = await getUserScopes(user.id)
 
   const supabase = await createClient()
@@ -51,12 +62,24 @@ async function guardCalibration(profileId: string) {
 
   if (!isHighPrivilegeScope(scopes.perfilNivel)) {
     if (user.empresaId && profile.empresa && profile.empresa !== user.empresaId) throw new Error('FORBIDDEN')
-    if (profile.concessionaria && !canAccessConcessionaria(scopes, profile.concessionaria)) {
-      throw new Error('FORBIDDEN')
-    }
+    if (profile.concessionaria && !canAccessConcessionaria(scopes, profile.concessionaria)) throw new Error('FORBIDDEN')
   }
 
   return { user, scopes, profile }
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function findCalibration(supabase: any, profileId: string, concessionariaId: string | null) {
+  let q = supabase
+    .from('competencia_calibracao')
+    .select('id, finalizada')
+    .eq('colaborador', profileId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+  if (concessionariaId) q = q.eq('concessionaria', concessionariaId)
+  const { data, error } = await q.maybeSingle()
+  if (error) throw error
+  return data as { id: string; finalizada: boolean } | null
 }
 
 async function createOrGetCalibration(
@@ -65,19 +88,11 @@ async function createOrGetCalibration(
   profileId: string,
   concessionariaId: string | null,
   userId: string,
-): Promise<string> {
-  let findQuery = supabase
-    .from('competencia_calibracao')
-    .select('id')
-    .eq('colaborador', profileId)
-    .order('created_at', { ascending: false })
-    .limit(1)
-  if (concessionariaId) findQuery = findQuery.eq('concessionaria', concessionariaId)
-  const { data: existing, error: findError } = await findQuery.maybeSingle()
-  if (findError) throw findError
-  if (existing) return existing.id
+): Promise<{ id: string; finalizada: boolean }> {
+  const existing = await findCalibration(supabase, profileId, concessionariaId)
+  if (existing) return existing
 
-  const { data: created, error: insertError } = await supabase
+  const { data: created, error } = await supabase
     .from('competencia_calibracao')
     .insert({
       colaborador: profileId,
@@ -85,48 +100,36 @@ async function createOrGetCalibration(
       created_by: userId,
       data_calibracao: new Date().toISOString(),
     })
-    .select('id')
+    .select('id, finalizada')
     .single()
-  if (insertError) throw insertError
-  return created.id
+  if (error) throw error
+  return created
 }
 
-async function upsertCalibrationResult(
+type CellPatch = { habitoId: string; stage: CalibrationStage; opcao: string | null }
+
+async function upsertCells(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   supabase: any,
   calibracaoId: string,
-  habitoId: string,
-  stage: CalibrationStage,
-  opcao: string | null,
-  points: number | null,
+  cells: CellPatch[],
+  pointsMap: Map<string, number>,
 ) {
-  const cols = CALIBRATION_STAGE_COLUMNS[stage]
-  const { data: existing, error: findError } = await supabase
+  const byHabito = new Map<string, Record<string, unknown>>()
+  for (const cell of cells) {
+    const cols = CALIBRATION_STAGE_COLUMNS[cell.stage]
+    const payload = byHabito.get(cell.habitoId) ?? { calibracao: calibracaoId, habito: cell.habitoId }
+    payload[cols.opcao] = cell.opcao
+    payload[cols.pontos] = cell.opcao ? pointsMap.get(cell.opcao) ?? null : null
+    payload.updated_at = new Date().toISOString()
+    byHabito.set(cell.habitoId, payload)
+  }
+  const rows = [...byHabito.values()]
+  if (rows.length === 0) return
+  const { error } = await supabase
     .from('calibracao_resultado')
-    .select('id')
-    .eq('calibracao', calibracaoId)
-    .eq('habito', habitoId)
-    .limit(1)
-    .maybeSingle()
-  if (findError) throw findError
-
-  const patch: Record<string, unknown> = {
-    [cols.opcao]: opcao,
-    [cols.pontos]: points,
-    updated_at: new Date().toISOString(),
-  }
-
-  if (existing) {
-    const { error } = await supabase.from('calibracao_resultado').update(patch).eq('id', existing.id)
-    if (error) throw error
-  } else {
-    const { error } = await supabase.from('calibracao_resultado').insert({
-      calibracao: calibracaoId,
-      habito: habitoId,
-      ...patch,
-    })
-    if (error) throw error
-  }
+    .upsert(rows, { onConflict: 'calibracao,habito' })
+  if (error) throw error
 }
 
 async function buildPointsMap(): Promise<Map<string, number>> {
@@ -136,20 +139,8 @@ async function buildPointsMap(): Promise<Map<string, number>> {
   return map
 }
 
-export async function createOrGetCalibrationAction(
-  _: CalibrationActionState,
-  formData: FormData,
-): Promise<CalibrationActionState> {
-  try {
-    const profileId = String(formData.get('profileId') ?? '')
-    const { user, profile } = await guardCalibration(profileId)
-    const supabase = await createClient()
-    await createOrGetCalibration(supabase, profileId, profile.concessionaria, user.id)
-    revalidatePath(`/competencias/calibracao/${profileId}`)
-    return { ok: true, message: 'Calibracao pronta.' }
-  } catch (err) {
-    return errorState(err, 'Erro ao iniciar calibracao.')
-  }
+async function assertNotFinalized(calibration: { finalizada: boolean }) {
+  if (calibration.finalizada) throw new Error('FINALIZED')
 }
 
 export async function saveCalibrationCellAction(
@@ -167,9 +158,10 @@ export async function saveCalibrationCellAction(
 
     const { user, profile } = await guardCalibration(parsed.data.profileId)
     const supabase = await createClient()
-    const calibracaoId = await createOrGetCalibration(supabase, parsed.data.profileId, profile.concessionaria, user.id)
-    const points = (await buildPointsMap()).get(parsed.data.opcao) ?? null
-    await upsertCalibrationResult(supabase, calibracaoId, parsed.data.habitoId, parsed.data.stage, parsed.data.opcao, points)
+    const calibration = await createOrGetCalibration(supabase, parsed.data.profileId, profile.concessionaria, user.id)
+    await assertNotFinalized(calibration)
+    const pointsMap = await buildPointsMap()
+    await upsertCells(supabase, calibration.id, [parsed.data], pointsMap)
 
     revalidatePath(`/competencias/calibracao/${parsed.data.profileId}`)
     return { ok: true, message: 'Resposta salva.' }
@@ -183,10 +175,10 @@ export async function saveCalibrationMatrixAction(
   formData: FormData,
 ): Promise<CalibrationActionState> {
   try {
-    const rawCells = formData.get('cells')
     let parsedCells: unknown = []
     try {
-      parsedCells = JSON.parse(typeof rawCells === 'string' ? rawCells : '[]')
+      const raw = formData.get('cells')
+      parsedCells = JSON.parse(typeof raw === 'string' ? raw : '[]')
     } catch {
       return { ok: false, message: 'Dados invalidos.' }
     }
@@ -199,22 +191,18 @@ export async function saveCalibrationMatrixAction(
 
     const { user, profile } = await guardCalibration(parsed.data.profileId)
     const supabase = await createClient()
-    const calibracaoId = await createOrGetCalibration(supabase, parsed.data.profileId, profile.concessionaria, user.id)
+    const calibration = await createOrGetCalibration(supabase, parsed.data.profileId, profile.concessionaria, user.id)
+    await assertNotFinalized(calibration)
     const pointsMap = await buildPointsMap()
+    await upsertCells(supabase, calibration.id, parsed.data.cells, pointsMap)
 
-    for (const cell of parsed.data.cells) {
-      await upsertCalibrationResult(
-        supabase,
-        calibracaoId,
-        cell.habitoId,
-        cell.stage,
-        cell.opcao,
-        cell.opcao ? pointsMap.get(cell.opcao) ?? null : null,
-      )
-    }
-
+    const habitosTocados = new Set(parsed.data.cells.map((c) => c.habitoId)).size
     revalidatePath(`/competencias/calibracao/${parsed.data.profileId}`)
-    return { ok: true, message: `${parsed.data.cells.length} resposta(s) salva(s).` }
+    return {
+      ok: true,
+      message: 'Matriz salva.',
+      summary: `${parsed.data.cells.length} resposta(s) em ${habitosTocados} habito(s).`,
+    }
   } catch (err) {
     return errorState(err, 'Erro ao salvar matriz.')
   }
@@ -234,18 +222,11 @@ export async function resetCalibrationCellAction(
 
     const { profile } = await guardCalibration(parsed.data.profileId)
     const supabase = await createClient()
-    const calibration = await supabase
-      .from('competencia_calibracao')
-      .select('id')
-      .eq('colaborador', parsed.data.profileId)
-      .eq('concessionaria', profile.concessionaria ?? '')
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .maybeSingle()
-    if (calibration.error) throw calibration.error
-    if (!calibration.data) return { ok: true, message: 'Nada para limpar.' }
+    const calibration = await findCalibration(supabase, parsed.data.profileId, profile.concessionaria)
+    if (!calibration) return { ok: true, message: 'Nada para limpar.' }
+    await assertNotFinalized(calibration)
+    await upsertCells(supabase, calibration.id, [{ ...parsed.data, opcao: null }], new Map())
 
-    await upsertCalibrationResult(supabase, calibration.data.id, parsed.data.habitoId, parsed.data.stage, null, null)
     revalidatePath(`/competencias/calibracao/${parsed.data.profileId}`)
     return { ok: true, message: 'Resposta limpa.' }
   } catch (err) {
@@ -253,3 +234,81 @@ export async function resetCalibrationCellAction(
   }
 }
 
+export async function finalizeCalibrationAction(
+  _: CalibrationActionState,
+  formData: FormData,
+): Promise<CalibrationActionState> {
+  try {
+    const parsed = CalibrationFinalizeSchema.safeParse({ profileId: formData.get('profileId') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    const { user, profile } = await guardCalibration(parsed.data.profileId)
+    const supabase = await createClient()
+    const calibration = await createOrGetCalibration(supabase, parsed.data.profileId, profile.concessionaria, user.id)
+    const { error } = await supabase
+      .from('competencia_calibracao')
+      .update({ finalizada: true, data_finalizada: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .eq('id', calibration.id)
+    if (error) return { ok: false, message: 'Nao foi possivel finalizar.' }
+
+    revalidatePath(`/competencias/calibracao/${parsed.data.profileId}`)
+    return { ok: true, message: 'Calibracao finalizada.' }
+  } catch (err) {
+    return errorState(err, 'Erro ao finalizar calibracao.')
+  }
+}
+
+export async function reopenCalibrationAction(
+  _: CalibrationActionState,
+  formData: FormData,
+): Promise<CalibrationActionState> {
+  try {
+    const parsed = CalibrationReopenSchema.safeParse({ profileId: formData.get('profileId') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    const { profile } = await guardCalibration(parsed.data.profileId, true)
+    const supabase = await createClient()
+    const calibration = await findCalibration(supabase, parsed.data.profileId, profile.concessionaria)
+    if (!calibration) return { ok: true, message: 'Calibracao inexistente.' }
+    const { error } = await supabase
+      .from('competencia_calibracao')
+      .update({ finalizada: false, data_finalizada: null, updated_at: new Date().toISOString() })
+      .eq('id', calibration.id)
+    if (error) return { ok: false, message: 'Nao foi possivel reabrir.' }
+
+    revalidatePath(`/competencias/calibracao/${parsed.data.profileId}`)
+    return { ok: true, message: 'Calibracao reaberta.' }
+  } catch (err) {
+    return errorState(err, 'Erro ao reabrir calibracao.')
+  }
+}
+
+export async function validateCalibrationAction(
+  _: CalibrationActionState,
+  formData: FormData,
+): Promise<CalibrationActionState> {
+  try {
+    const profileId = String(formData.get('profileId') ?? '')
+    await guardCalibration(profileId)
+    const profile = await getCalibrationProfile(profileId)
+    if (!profile) throw new Error('NOT_FOUND')
+
+    const matrix = await getCalibrationMatrix(profile)
+    const totalHabitos = countMatrixHabitos(matrix)
+    const performance = await getCalibrationPerformanceSummary(matrix.calibracaoId, totalHabitos)
+    const alerts = buildCalibrationValidationAlerts({
+      hasMaps: matrix.hasMaps,
+      totalHabitos,
+      performance,
+      finalizada: matrix.finalizada,
+    })
+
+    return {
+      ok: true,
+      message: alerts.length === 0 ? 'Sem pendencias.' : `${alerts.length} alerta(s).`,
+      alerts: alerts.map((a) => a.message),
+    }
+  } catch (err) {
+    return errorState(err, 'Erro ao validar calibracao.')
+  }
+}
