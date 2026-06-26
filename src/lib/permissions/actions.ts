@@ -11,5 +11,5 @@ export const ROUTE_PERMISSIONS: Record<string, PermissionAction> = {
   '/admin/concessionarias': 'admin:manage',
   '/admin/usuarios': 'admin:manage',
   '/admin/areas-funcoes': 'admin:manage',
+  '/biblioteca-indicadores': 'admin:manage',
 }
-

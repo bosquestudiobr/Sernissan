@@ -50,6 +50,7 @@ export function assertCan(
 
 export function canAccessRoute(user: CurrentUserView, route: string): boolean {
   if (user.ativo === false || user.aprovado === false) return false
+  if (route.startsWith('/biblioteca-indicadores') && !canManageStructuralAdmin(user.perfilNivel)) return false
   if (route.startsWith('/admin') && !canManageStructuralAdmin(user.perfilNivel)) return false
   return true
 }

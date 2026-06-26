@@ -16,6 +16,7 @@
   concessionarias: '/admin/concessionarias',
   usuarios: '/admin/usuarios',
   areas_funcoes: '/admin/areas-funcoes',
+  biblioteca_indicadores: '/biblioteca-indicadores',
   relatorios: '/modulos/relatorios',
   mapa_competencias: '/modulos/competencias',
   guia: '/modulos/guia',
@@ -40,4 +41,3 @@ export function mapBubbleIconToLucide(iconKey?: string | null): string {
   if (!iconKey) return 'Circle'
   return BUBBLE_ICON_TO_LUCIDE[iconKey] ?? 'Circle'
 }
-
