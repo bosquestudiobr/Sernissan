@@ -15,6 +15,7 @@ import type { PlacarDetail, PlacarIndicatorOption, PlacarRow } from '@/server/qu
 import type { PlacarActionState } from '@/server/actions/placar'
 
 type Option = { label: string; value: string }
+type ActionFn = (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
 
 type PlacarViewProps = {
   result: PaginatedResult<PlacarRow>
@@ -26,10 +27,15 @@ type PlacarViewProps = {
   availableIndicators: PlacarIndicatorOption[]
   defaultConcessionariaId?: string | null
   canEdit: boolean
-  createAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
-  updateAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
-  deleteAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
-  updateIndicatorsAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
+  createAction: ActionFn
+  updateAction: ActionFn
+  deleteAction: ActionFn
+  updateIndicatorsAction: ActionFn
+  recalcAction: ActionFn
+  recalcRankingAction: ActionFn
+  finalizeAction: ActionFn
+  reopenAction: ActionFn
+  loadRankingAction: ActionFn
   refreshAction: () => Promise<PlacarActionState>
 }
 
@@ -43,6 +49,11 @@ export function PlacarView({
   updateAction,
   deleteAction,
   updateIndicatorsAction,
+  recalcAction,
+  recalcRankingAction,
+  finalizeAction,
+  reopenAction,
+  loadRankingAction,
   refreshAction,
 }: PlacarViewProps) {
   const [open, setOpen] = useState(false)
@@ -95,7 +106,15 @@ export function PlacarView({
           />
         }
       >
-        <PlacarTable data={result.data} canEdit={canEdit} onEdit={openEdit} deleteAction={deleteAction} />
+        <PlacarTable
+          data={result.data}
+          canEdit={canEdit}
+          onEdit={openEdit}
+          deleteAction={deleteAction}
+          recalcAction={recalcAction}
+          finalizeAction={finalizeAction}
+          reopenAction={reopenAction}
+        />
       </AdminPageShell>
 
       {canEdit ? (
@@ -112,9 +131,10 @@ export function PlacarView({
           createAction={createAction}
           updateAction={updateAction}
           updateIndicatorsAction={updateIndicatorsAction}
+          loadRankingAction={loadRankingAction}
+          recalcRankingAction={recalcRankingAction}
         />
       ) : null}
     </>
   )
 }
-

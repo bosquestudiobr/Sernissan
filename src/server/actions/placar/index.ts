@@ -14,10 +14,23 @@ import {
   PlacarUpdateSchema,
 } from '@/lib/validations/placar'
 import { getUserScopes } from '@/server/queries/scopes'
+import { getPlacarRanking } from '@/server/queries/placar'
+import { recalculatePlacar } from '@/server/jobs/placar/recalculate-placar'
+import { recalculateIndicators } from '@/server/jobs/placar/recalculate-indicators'
+import { recalculateRanking } from '@/server/jobs/placar/recalculate-ranking'
+import { recalculatePoints } from '@/server/jobs/placar/recalculate-points'
+import type { RankingRow } from '@/server/jobs/placar/types'
+import {
+  FinalizePlacarSchema,
+  RecalculatePlacarSchema,
+  ReopenPlacarSchema,
+} from '@/lib/validations/placar'
 
 export type PlacarActionState = {
   ok: boolean
   message?: string
+  summary?: string
+  ranking?: RankingRow[]
   fieldErrors?: Record<string, string[] | undefined>
 }
 
@@ -298,3 +311,156 @@ export async function refreshPlacarAction(): Promise<PlacarActionState> {
 }
 
 
+
+
+function recalcErrorState(err: unknown): PlacarActionState {
+  if (err instanceof Error && err.message === 'FORBIDDEN') {
+    return { ok: false, message: 'Sem permissao para esta operacao.' }
+  }
+  if (err instanceof Error && err.message === 'NOT_FOUND') {
+    return { ok: false, message: 'Placar nao encontrado.' }
+  }
+  if (err instanceof Error && err.message === 'PLACAR_FINALIZADO') {
+    return { ok: false, message: 'Placar finalizado: reabra antes de recalcular.' }
+  }
+  return { ok: false, message: 'Erro ao processar recalculo.' }
+}
+
+export async function recalculatePlacarAction(
+  _: PlacarActionState,
+  formData: FormData,
+): Promise<PlacarActionState> {
+  try {
+    const parsed = RecalculatePlacarSchema.safeParse({ id: formData.get('id') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    const { placar } = await assertPlacarScope(parsed.data.id)
+    if (placar.finalizado) throw new Error('PLACAR_FINALIZADO')
+
+    const supabase = await createClient()
+    const summary = await recalculatePlacar(supabase, parsed.data.id)
+
+    revalidatePath('/placar')
+    return {
+      ok: true,
+      message: 'Recalculo concluido.',
+      summary: `${summary.indicators.activated} indicadores, ${summary.points.processed} pontuados (${summary.points.totalPontos} pts), ${summary.ranking.colaboradores} colaboradores no ranking.`,
+      ranking: summary.ranking.ranking,
+    }
+  } catch (err) {
+    return recalcErrorState(err)
+  }
+}
+
+export async function recalculatePlacarIndicatorsAction(
+  _: PlacarActionState,
+  formData: FormData,
+): Promise<PlacarActionState> {
+  try {
+    const parsed = RecalculatePlacarSchema.safeParse({ id: formData.get('id') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    const { placar } = await assertPlacarScope(parsed.data.id)
+    if (placar.finalizado) throw new Error('PLACAR_FINALIZADO')
+
+    const supabase = await createClient()
+    const result = await recalculateIndicators(supabase, parsed.data.id)
+
+    revalidatePath('/placar')
+    return { ok: true, message: 'Indicadores recalculados.', summary: `${result.activated} de ${result.linked} indicadores ativados.` }
+  } catch (err) {
+    return recalcErrorState(err)
+  }
+}
+
+export async function recalculatePlacarRankingAction(
+  _: PlacarActionState,
+  formData: FormData,
+): Promise<PlacarActionState> {
+  try {
+    const parsed = RecalculatePlacarSchema.safeParse({ id: formData.get('id') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    const { placar } = await assertPlacarScope(parsed.data.id)
+    if (placar.finalizado) throw new Error('PLACAR_FINALIZADO')
+
+    const supabase = await createClient()
+    await recalculatePoints(supabase, parsed.data.id)
+    const ranking = await recalculateRanking(supabase, parsed.data.id)
+
+    revalidatePath('/placar')
+    return {
+      ok: true,
+      message: 'Ranking recalculado.',
+      summary: `${ranking.colaboradores} colaboradores no ranking.`,
+      ranking: ranking.ranking,
+    }
+  } catch (err) {
+    return recalcErrorState(err)
+  }
+}
+
+export async function finalizePlacarAction(
+  _: PlacarActionState,
+  formData: FormData,
+): Promise<PlacarActionState> {
+  try {
+    const parsed = FinalizePlacarSchema.safeParse({ id: formData.get('id') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    const { placar } = await assertPlacarScope(parsed.data.id)
+    if (placar.finalizado) return { ok: true, message: 'Placar ja estava finalizado.' }
+
+    const supabase = await createClient()
+    const { error } = await supabase
+      .from('placar')
+      .update({ finalizado: true, updated_at: new Date().toISOString() })
+      .eq('id', parsed.data.id)
+    if (error) return { ok: false, message: 'Nao foi possivel finalizar.' }
+
+    revalidatePath('/placar')
+    return { ok: true, message: 'Placar finalizado.' }
+  } catch (err) {
+    return recalcErrorState(err)
+  }
+}
+
+export async function reopenPlacarAction(
+  _: PlacarActionState,
+  formData: FormData,
+): Promise<PlacarActionState> {
+  try {
+    const parsed = ReopenPlacarSchema.safeParse({ id: formData.get('id') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    await assertPlacarScope(parsed.data.id)
+
+    const supabase = await createClient()
+    const { error } = await supabase
+      .from('placar')
+      .update({ finalizado: false, updated_at: new Date().toISOString() })
+      .eq('id', parsed.data.id)
+    if (error) return { ok: false, message: 'Nao foi possivel reabrir.' }
+
+    revalidatePath('/placar')
+    return { ok: true, message: 'Placar reaberto.' }
+  } catch (err) {
+    return recalcErrorState(err)
+  }
+}
+
+export async function loadPlacarRankingAction(
+  _: PlacarActionState,
+  formData: FormData,
+): Promise<PlacarActionState> {
+  try {
+    const parsed = RecalculatePlacarSchema.safeParse({ id: formData.get('id') })
+    if (!parsed.success) return { ok: false, message: 'Dados invalidos.' }
+
+    await assertPlacarScope(parsed.data.id)
+    const ranking = await getPlacarRanking(parsed.data.id)
+    return { ok: true, ranking }
+  } catch (err) {
+    return recalcErrorState(err)
+  }
+}

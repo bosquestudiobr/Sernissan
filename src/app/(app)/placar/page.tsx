@@ -6,7 +6,12 @@ import { LoadingState } from '@/components/shared/LoadingState'
 import {
   createPlacarAction,
   deletePlacarAction,
+  finalizePlacarAction,
+  loadPlacarRankingAction,
+  recalculatePlacarAction,
+  recalculatePlacarRankingAction,
   refreshPlacarAction,
+  reopenPlacarAction,
   updatePlacarAction,
   updatePlacarIndicatorsAction,
 } from '@/server/actions/placar'
@@ -60,8 +65,14 @@ export default async function PlacarPage({ searchParams }: PageProps) {
         updateAction={updatePlacarAction}
         deleteAction={deletePlacarAction}
         updateIndicatorsAction={updatePlacarIndicatorsAction}
+        recalcAction={recalculatePlacarAction}
+        recalcRankingAction={recalculatePlacarRankingAction}
+        finalizeAction={finalizePlacarAction}
+        reopenAction={reopenPlacarAction}
+        loadRankingAction={loadPlacarRankingAction}
         refreshAction={refreshPlacarAction}
       />
     </Suspense>
   )
 }
+

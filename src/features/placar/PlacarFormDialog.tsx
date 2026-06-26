@@ -14,6 +14,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { PlacarIndicatorsPanel } from '@/features/placar/PlacarIndicatorsPanel'
+import { PlacarRankingPanel } from '@/features/placar/PlacarRankingPanel'
 import type { PlacarDetail, PlacarIndicatorOption } from '@/server/queries/placar'
 import type { PlacarActionState } from '@/server/actions/placar'
 
@@ -31,6 +32,8 @@ type PlacarFormDialogProps = {
   createAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
   updateAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
   updateIndicatorsAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
+  loadRankingAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
+  recalcRankingAction: (prev: PlacarActionState, formData: FormData) => Promise<PlacarActionState>
 }
 
 const initialState: PlacarActionState = { ok: false }
@@ -55,6 +58,8 @@ export function PlacarFormDialog({
   createAction,
   updateAction,
   updateIndicatorsAction,
+  loadRankingAction,
+  recalcRankingAction,
 }: PlacarFormDialogProps) {
   const isEdit = editing !== null
   const [createState, createFormAction, createPending] = useActionState(createAction, initialState)
@@ -190,10 +195,21 @@ export function PlacarFormDialog({
             available={availableIndicators}
             selectedIds={editing.indicadorIds}
             updateAction={updateIndicatorsAction}
+            disabled={editing.finalizado === true}
+          />
+        ) : null}
+
+        {isEdit && editing ? (
+          <PlacarRankingPanel
+            placarId={editing.id}
+            loadAction={loadRankingAction}
+            recalcAction={recalcRankingAction}
+            disabled={editing.finalizado === true}
           />
         ) : null}
       </DialogContent>
     </Dialog>
   )
 }
+
 

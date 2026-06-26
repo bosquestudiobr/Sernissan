@@ -39,3 +39,20 @@ export const PlacarIndicatorsSchema = z.object({
 })
 
 export const DeletePlacarSchema = z.object({ id: uuid })
+
+export const RecalculatePlacarSchema = z.object({ id: uuid })
+
+export const FinalizePlacarSchema = z.object({ id: uuid })
+
+export const ReopenPlacarSchema = z.object({ id: uuid })
+
+export const RankingParamsSchema = z.object({
+  placarId: uuid,
+  escopo: z.enum(['colaborador', 'concessionaria']).optional(),
+})
+
+export const PlacarCalculationInputSchema = z.object({
+  meta: z.coerce.number().nullable(),
+  valor: z.coerce.number().nullable(),
+  peso: z.coerce.number().nullable(),
+})

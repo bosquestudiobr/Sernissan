@@ -87,3 +87,55 @@ describe('placar permissions', () => {
     expect(canManagePlacar(6)).toBe(true)
   })
 })
+
+import {
+  FinalizePlacarSchema,
+  PlacarCalculationInputSchema,
+  RankingParamsSchema,
+  RecalculatePlacarSchema,
+} from '@/lib/validations/placar'
+import { canDeletePlacar } from '@/lib/permissions/placar'
+
+describe('placar recalculo validations', () => {
+  it('RecalculatePlacarSchema exige uuid', () => {
+    expect(RecalculatePlacarSchema.safeParse({ id: 'x' }).success).toBe(false)
+    expect(RecalculatePlacarSchema.safeParse({ id: '00000000-0000-4000-8000-000000000001' }).success).toBe(true)
+  })
+
+  it('FinalizePlacarSchema exige uuid', () => {
+    expect(FinalizePlacarSchema.safeParse({ id: '00000000-0000-4000-8000-000000000001' }).success).toBe(true)
+  })
+
+  it('RankingParamsSchema aceita escopo opcional', () => {
+    expect(
+      RankingParamsSchema.safeParse({ placarId: '00000000-0000-4000-8000-000000000001' }).success,
+    ).toBe(true)
+    expect(
+      RankingParamsSchema.safeParse({
+        placarId: '00000000-0000-4000-8000-000000000001',
+        escopo: 'colaborador',
+      }).success,
+    ).toBe(true)
+    expect(
+      RankingParamsSchema.safeParse({
+        placarId: '00000000-0000-4000-8000-000000000001',
+        escopo: 'invalido',
+      }).success,
+    ).toBe(false)
+  })
+
+  it('PlacarCalculationInputSchema coage numeros', () => {
+    const parsed = PlacarCalculationInputSchema.safeParse({ meta: '100', valor: '50', peso: '10' })
+    expect(parsed.success).toBe(true)
+    if (parsed.success) {
+      expect(parsed.data.meta).toBe(100)
+      expect(parsed.data.valor).toBe(50)
+      expect(parsed.data.peso).toBe(10)
+    }
+  })
+
+  it('permissao de exclusao respeita nivel', () => {
+    expect(canDeletePlacar(6)).toBe(true)
+    expect(canDeletePlacar(7)).toBe(false)
+  })
+})

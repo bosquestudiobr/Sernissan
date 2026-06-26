@@ -4,6 +4,9 @@ import type { OrganizationalContextView, UserScopes } from '@/lib/types/user'
 import { isHighPrivilegeScope } from '@/lib/permissions/scopes'
 import { PlacarFiltersSchema } from '@/lib/validations/placar'
 import { buildPageCount, rangeFromPage, resolveSortColumn } from '@/server/queries/list-helpers'
+import { computeIndicatorPoints } from '@/server/jobs/placar/recalculate-points'
+import { computeRanking } from '@/server/jobs/placar/recalculate-ranking'
+import type { RankingRow } from '@/server/jobs/placar/types'
 
 export type PlacarParams = {
   page: number
@@ -30,6 +33,8 @@ export type PlacarRow = {
   created_at: string
   indicadorCount: number
   indicadorIds: string[]
+  totalPontos: number
+  colaboradorCount: number
   origemLabel: string | null
   acumuladoLabel: string | null
 }
@@ -162,6 +167,36 @@ async function getConcessionariaNames(ids: string[]): Promise<Map<string, string
   return map
 }
 
+async function getPlacarTotals(placarIds: string[]): Promise<Map<string, { totalPontos: number; colaboradores: number }>> {
+  const map = new Map<string, { totalPontos: number; colaboradores: number }>()
+  if (placarIds.length === 0) return map
+
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('indicadores')
+    .select('placar, pontos_ranking, colaborador_user')
+    .in('placar', placarIds)
+  if (error) throw error
+
+  const colaboradores = new Map<string, Set<string>>()
+  for (const row of data ?? []) {
+    if (!row.placar) continue
+    const current = map.get(row.placar) ?? { totalPontos: 0, colaboradores: 0 }
+    current.totalPontos = Math.round((current.totalPontos + (row.pontos_ranking ?? 0) + Number.EPSILON) * 10000) / 10000
+    map.set(row.placar, current)
+    if (row.colaborador_user) {
+      const set = colaboradores.get(row.placar) ?? new Set<string>()
+      set.add(row.colaborador_user)
+      colaboradores.set(row.placar, set)
+    }
+  }
+  for (const [placarId, set] of colaboradores.entries()) {
+    const current = map.get(placarId)
+    if (current) current.colaboradores = set.size
+  }
+  return map
+}
+
 function applyPlacarScope(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   query: any,
@@ -251,10 +286,11 @@ export async function listPlacares(
   const rows = data ?? []
   const placarIds = rows.map((row) => row.id)
   const concessionariaIds = [...new Set(rows.map((row) => row.concessionaria).filter(Boolean) as string[])]
-  const [counts, indicatorIdsMap, concessionariaNames] = await Promise.all([
+  const [counts, indicatorIdsMap, concessionariaNames, totals] = await Promise.all([
     getIndicatorCounts(placarIds),
     getIndicatorIdsByPlacar(placarIds),
     getConcessionariaNames(concessionariaIds),
+    getPlacarTotals(placarIds),
   ])
 
   const mapped: PlacarRow[] = rows.map((row) => ({
@@ -270,6 +306,8 @@ export async function listPlacares(
     created_at: row.created_at,
     indicadorCount: counts.get(row.id) ?? 0,
     indicadorIds: indicatorIdsMap.get(row.id) ?? [],
+    totalPontos: totals.get(row.id)?.totalPontos ?? 0,
+    colaboradorCount: totals.get(row.id)?.colaboradores ?? 0,
     origemLabel: row.opcao_origem ? origem.get(row.opcao_origem) ?? row.opcao_origem : null,
     acumuladoLabel: row.opcao_acumulado ? acumulado.get(row.opcao_acumulado) ?? row.opcao_acumulado : null,
   }))
@@ -316,6 +354,8 @@ export async function getPlacarById(id: string, ctx: PlacarQueryContext): Promis
     empresa: data.empresa,
     created_at: data.created_at,
     indicadorCount: indicadores.length,
+    totalPontos: 0,
+    colaboradorCount: 0,
     origemLabel: data.opcao_origem ? origem.get(data.opcao_origem) ?? data.opcao_origem : null,
     acumuladoLabel: data.opcao_acumulado ? acumulado.get(data.opcao_acumulado) ?? data.opcao_acumulado : null,
     indicadorIds: indicadores.map((item) => item.id),
@@ -371,3 +411,136 @@ export async function getAvailableIndicatorsForPlacar(concessionariaId: string):
 
 
 
+
+
+
+export type PlacarSummary = {
+  placarId: string
+  indicadorCount: number
+  indicadoresComValor: number
+  totalPontos: number
+  colaboradorCount: number
+  rankingAtualizado: boolean
+  finalizado: boolean
+}
+
+export async function getPlacarSummary(placarId: string): Promise<PlacarSummary> {
+  const supabase = await createClient()
+
+  const [{ data: placar, error: placarError }, { data: indicadores, error: indError }] = await Promise.all([
+    supabase.from('placar').select('id, finalizado, ranking_atualizado').eq('id', placarId).maybeSingle(),
+    supabase.from('indicadores').select('pontos_ranking, valor, colaborador_user').eq('placar', placarId),
+  ])
+  if (placarError) throw placarError
+  if (indError) throw indError
+
+  const rows = indicadores ?? []
+  let total = 0
+  let comValor = 0
+  const colaboradores = new Set<string>()
+  for (const row of rows) {
+    total += row.pontos_ranking ?? 0
+    if (row.valor != null) comValor += 1
+    if (row.colaborador_user) colaboradores.add(row.colaborador_user)
+  }
+
+  return {
+    placarId,
+    indicadorCount: rows.length,
+    indicadoresComValor: comValor,
+    totalPontos: Math.round((total + Number.EPSILON) * 10000) / 10000,
+    colaboradorCount: colaboradores.size,
+    rankingAtualizado: placar?.ranking_atualizado ?? false,
+    finalizado: placar?.finalizado ?? false,
+  }
+}
+
+export async function getPlacarRanking(placarId: string): Promise<RankingRow[]> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('indicadores')
+    .select('colaborador_user, pontos_ranking')
+    .eq('placar', placarId)
+  if (error) throw error
+
+  const rows = data ?? []
+  const colaboradorIds = [...new Set(rows.map((r) => r.colaborador_user).filter(Boolean) as string[])]
+
+  const names = new Map<string, string>()
+  if (colaboradorIds.length > 0) {
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('id, nome')
+      .in('id', colaboradorIds)
+    if (profilesError) throw profilesError
+    for (const p of profiles ?? []) names.set(p.id, p.nome ?? p.id)
+  }
+
+  return computeRanking(
+    rows.map((r) => ({
+      colaboradorId: r.colaborador_user,
+      colaboradorNome: r.colaborador_user ? names.get(r.colaborador_user) ?? null : null,
+      pontos: r.pontos_ranking ?? 0,
+    })),
+  )
+}
+
+export type PlacarCalculationStatus = {
+  placarId: string
+  rankingAtualizado: boolean
+  finalizado: boolean
+  updatedAt: string | null
+  indicadorCount: number
+  indicadoresComValor: number
+}
+
+export async function getPlacarCalculationStatus(placarId: string): Promise<PlacarCalculationStatus> {
+  const supabase = await createClient()
+  const [{ data: placar, error: placarError }, { data: indicadores, error: indError }] = await Promise.all([
+    supabase.from('placar').select('id, finalizado, ranking_atualizado, updated_at').eq('id', placarId).maybeSingle(),
+    supabase.from('indicadores').select('valor').eq('placar', placarId),
+  ])
+  if (placarError) throw placarError
+  if (indError) throw indError
+
+  const rows = indicadores ?? []
+  return {
+    placarId,
+    rankingAtualizado: placar?.ranking_atualizado ?? false,
+    finalizado: placar?.finalizado ?? false,
+    updatedAt: placar?.updated_at ?? null,
+    indicadorCount: rows.length,
+    indicadoresComValor: rows.filter((r) => r.valor != null).length,
+  }
+}
+
+export type PlacarRecalculationPreview = {
+  placarId: string
+  indicadorCount: number
+  totalPontosAtual: number
+  totalPontosPrevisto: number
+}
+
+export async function getPlacarRecalculationPreview(placarId: string): Promise<PlacarRecalculationPreview> {
+  const supabase = await createClient()
+  const { data, error } = await supabase
+    .from('indicadores')
+    .select('meta, valor, pontos, pontos_ranking')
+    .eq('placar', placarId)
+  if (error) throw error
+
+  const rows = data ?? []
+  let atual = 0
+  let previsto = 0
+  for (const row of rows) {
+    atual += row.pontos_ranking ?? 0
+    previsto += computeIndicatorPoints({ meta: row.meta, valor: row.valor, peso: row.pontos })
+  }
+
+  return {
+    placarId,
+    indicadorCount: rows.length,
+    totalPontosAtual: Math.round((atual + Number.EPSILON) * 10000) / 10000,
+    totalPontosPrevisto: Math.round((previsto + Number.EPSILON) * 10000) / 10000,
+  }
+}

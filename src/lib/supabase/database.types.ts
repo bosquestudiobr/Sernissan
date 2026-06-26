@@ -12,6 +12,31 @@ export type Database = {
   __InternalSupabase: {
     PostgrestVersion: "14.5"
   }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
+  }
   public: {
     Tables: {
       agendamentos: {
@@ -4068,10 +4093,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      placar_indicator_summary: {
+        Row: {
+          colaborador_count: number | null
+          indicador_count: number | null
+          indicadores_com_valor: number | null
+          placar_id: string | null
+          total_pontos: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_indicadores_placar_placar_id"
+            columns: ["placar_id"]
+            isOneToOne: false
+            referencedRelation: "placar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      placar_ranking_summary: {
+        Row: {
+          colaborador_nome: string | null
+          colaborador_user: string | null
+          placar_id: string | null
+          pontos_total: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_indicadores_placar_placar_id"
+            columns: ["placar_id"]
+            isOneToOne: false
+            referencedRelation: "placar"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
+      can_access_concessionaria: {
+        Args: { p_concessionaria_id: string }
+        Returns: boolean
+      }
+      can_access_grupo: { Args: { p_grupo_id: string }; Returns: boolean }
+      can_access_setor: { Args: { p_setor_id: string }; Returns: boolean }
       current_profile_id: { Args: never; Returns: string }
+      current_profile_level: { Args: never; Returns: number }
+      get_placar_ranking: {
+        Args: { p_placar_id: string }
+        Returns: {
+          colaborador_nome: string
+          colaborador_user: string
+          pontos_total: number
+          posicao: number
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
@@ -4200,6 +4275,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {},
   },
